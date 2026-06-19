@@ -27,6 +27,15 @@ internal sealed class Theme
     public int DotSize { get; set; } = 15;
     public int DotSpacing { get; set; } = 80;
 
+    public int SummonMods { get; set; } = 1;
+    public int SummonKey { get; set; } = 0x09;
+    public int CommitKey { get; set; } = 0x0D;
+    public int CancelKey { get; set; } = 0x1B;
+    public int MoveUpKey { get; set; } = 0x26;
+    public int MoveDownKey { get; set; } = 0x28;
+    public int MoveLeftKey { get; set; } = 0x25;
+    public int MoveRightKey { get; set; } = 0x27;
+
     public bool UseWallpaper { get; set; } = false;
     public bool ShowDesktopIcons { get; set; } = false;
     public int BlurAmount { get; set; } = 8;
@@ -66,6 +75,14 @@ internal sealed class Theme
         BorderThickness = BorderThickness,
         DotSize = DotSize,
         DotSpacing = DotSpacing,
+        SummonMods = SummonMods,
+        SummonKey = SummonKey,
+        CommitKey = CommitKey,
+        CancelKey = CancelKey,
+        MoveUpKey = MoveUpKey,
+        MoveDownKey = MoveDownKey,
+        MoveLeftKey = MoveLeftKey,
+        MoveRightKey = MoveRightKey,
         UseWallpaper = UseWallpaper,
         ShowDesktopIcons = ShowDesktopIcons,
         BlurAmount = BlurAmount,

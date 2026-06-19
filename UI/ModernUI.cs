@@ -7,10 +7,10 @@ namespace PrinceWM.UI;
 
 internal static class ModernUI
 {
-    public static readonly Color Accent = Color.FromArgb(120, 205, 255);
-    public static readonly Color Text = Color.FromArgb(236, 240, 248);
-    public static readonly Color SubText = Color.FromArgb(150, 160, 178);
-    public static readonly Color TrackOff = Color.FromArgb(64, 70, 84);
+    public static readonly Color Accent = Color.FromArgb(208, 211, 216);
+    public static readonly Color Text = Color.FromArgb(234, 236, 240);
+    public static readonly Color SubText = Color.FromArgb(138, 142, 150);
+    public static readonly Color TrackOff = Color.FromArgb(56, 58, 64);
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);

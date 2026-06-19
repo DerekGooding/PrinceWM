@@ -61,6 +61,14 @@ internal sealed class WindowCapture : IDisposable
 
     public bool LooksDead => _emptyUpdates > 40;
 
+    // Diagnostics (for tracking down blank captures on Windows 10).
+    public bool DiagHasPending => _hasPending;
+    public bool DiagPendingBlack => _pendingBlack;
+    public int DiagEmptyUpdates => _emptyUpdates;
+    public int DiagFramesSeen => _framesSeen;
+    public string DiagPool => $"{_poolSize.Width}x{_poolSize.Height}";
+    private int _framesSeen;
+
     public WindowCapture(IntPtr hwnd, ID3D11Device d3d, ID3D11DeviceContext ctx,
         ID2D1DeviceContext d2d, IDirect3DDevice rtDevice)
     {
@@ -167,6 +175,7 @@ internal sealed class WindowCapture : IDisposable
             if (f == null) break;
             latest?.Dispose();
             latest = f;
+            _framesSeen++;
         }
         if (latest == null)
         {

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using PrinceWM.Core;
+using PrinceWM.Native;
 using PrinceWM.UI;
 
 namespace PrinceWM;
@@ -9,6 +10,11 @@ namespace PrinceWM;
 internal sealed class SettingsForm : Form, IMessageFilter
 {
     private readonly Theme _theme;
+    private readonly AltTabHook _hook;
+    private int _tab;
+    private Action<int, int>? _capApply;
+    private bool _capRequireMod;
+    private Label? _capBox;
     public event Action? Changed;
     public event Action? RearrangeRequested;
 
@@ -20,15 +26,17 @@ internal sealed class SettingsForm : Form, IMessageFilter
     private readonly Stopwatch _slideClock = new();
     private int _targetLeft, _startLeft;
 
-    public SettingsForm(Theme theme)
+    public SettingsForm(Theme theme, AltTabHook hook)
     {
         _theme = theme;
+        _hook = hook;
+        _hook.HotkeyCaptured += OnHotkeyCaptured;
 
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
         TopMost = true;
         ShowInTaskbar = false;
-        BackColor = Color.FromArgb(18, 20, 26);
+        BackColor = Color.FromArgb(22, 22, 25);
         ForeColor = ModernUI.Text;
         Font = new Font("Segoe UI", 9f);
 
@@ -59,7 +67,32 @@ internal sealed class SettingsForm : Form, IMessageFilter
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
         Application.RemoveMessageFilter(this);
+        _hook.HotkeyCaptured -= OnHotkeyCaptured;
+        _hook.Capturing = false;
         base.OnFormClosed(e);
+    }
+
+    private void OnHotkeyCaptured(int mods, int key)
+    {
+        if (IsDisposed) return;
+        try
+        {
+            BeginInvoke(() =>
+            {
+                var apply = _capApply;
+                _capApply = null;
+                if (apply == null) return;
+                if (_capRequireMod && mods == 0)
+                {
+                    if (_capBox != null) _capBox.Text = "Use a modifier";
+                    return;
+                }
+                apply(mods, key);
+                Emit();
+                Build();
+            });
+        }
+        catch { }
     }
 
     public bool PreFilterMessage(ref Message m)
@@ -84,12 +117,15 @@ internal sealed class SettingsForm : Form, IMessageFilter
 
     private void Build()
     {
+        _hook.Capturing = false;
         Controls.Clear();
 
         Controls.Add(new Panel { Left = 0, Top = 0, Width = 3, Height = ClientSize.Height, BackColor = ModernUI.Accent });
 
         var header = new Panel { Left = 0, Top = 0, Width = ClientSize.Width, Height = 54, BackColor = Color.Transparent };
-        header.Controls.Add(new Label { Text = "CUSTOMIZE", Left = 22, Top = 19, AutoSize = true, ForeColor = ModernUI.Text, Font = new Font("Segoe UI Semibold", 12f) });
+        int tx = 22;
+        tx += AddTab(header, "Customize", 0, tx) + 18;
+        AddTab(header, "Hotkeys", 1, tx);
         var close = new Label { Text = "✕", Left = ClientSize.Width - 42, Top = 16, Width = 24, Height = 24, ForeColor = ModernUI.SubText, Font = new Font("Segoe UI", 11f), TextAlign = ContentAlignment.MiddleCenter, Cursor = Cursors.Hand };
         close.MouseEnter += (_, _) => close.ForeColor = ModernUI.Text;
         close.MouseLeave += (_, _) => close.ForeColor = ModernUI.SubText;
@@ -110,6 +146,33 @@ internal sealed class SettingsForm : Form, IMessageFilter
         Controls.Add(_content);
 
         int y = 10;
+        if (_tab == 0) BuildCustomize(ref y);
+        else BuildHotkeys(ref y);
+    }
+
+    private int AddTab(Panel header, string text, int index, int left)
+    {
+        bool active = _tab == index;
+        var lbl = new Label
+        {
+            Text = text,
+            Left = left,
+            Top = 17,
+            AutoSize = true,
+            ForeColor = active ? ModernUI.Text : ModernUI.SubText,
+            Font = new Font("Segoe UI Semibold", 12f),
+            Cursor = Cursors.Hand,
+        };
+        lbl.Click += (_, _) => { if (_tab != index) { _tab = index; Build(); } };
+        header.Controls.Add(lbl);
+        int w = TextRenderer.MeasureText(text, lbl.Font).Width;
+        if (active)
+            header.Controls.Add(new Panel { Left = left, Top = 44, Width = w, Height = 2, BackColor = ModernUI.Accent });
+        return w;
+    }
+
+    private void BuildCustomize(ref int y)
+    {
         Section("Colors", ref y);
         Swatch("Background", () => _theme.Background, v => _theme.Background = v, ref y);
         Swatch("Accent / selection", () => _theme.Accent, v => _theme.Accent = v, ref y);
@@ -157,6 +220,98 @@ internal sealed class SettingsForm : Form, IMessageFilter
         y += 16;
     }
 
+    private void BuildHotkeys(ref int y)
+    {
+        var d = new Theme();
+
+        _content.Controls.Add(new Label
+        {
+            Text = "Click a bind, press the keys.  ⟲ resets it.",
+            Left = 22, Top = y, AutoSize = true, ForeColor = ModernUI.SubText,
+            Font = new Font("Segoe UI", 8f),
+        });
+        y += 24;
+
+        Section("Activation", ref y);
+        KeybindRow("Open canvas",
+            () => (_theme.SummonMods, _theme.SummonKey),
+            (m, k) => { _theme.SummonMods = m; _theme.SummonKey = k; },
+            () => { _theme.SummonMods = d.SummonMods; _theme.SummonKey = d.SummonKey; },
+            true, ref y);
+
+        Section("In-canvas", ref y);
+        KeybindRow("Confirm / switch", () => (0, _theme.CommitKey), (_, k) => _theme.CommitKey = k, () => _theme.CommitKey = d.CommitKey, false, ref y);
+        KeybindRow("Cancel / close", () => (0, _theme.CancelKey), (_, k) => _theme.CancelKey = k, () => _theme.CancelKey = d.CancelKey, false, ref y);
+        KeybindRow("Move up", () => (0, _theme.MoveUpKey), (_, k) => _theme.MoveUpKey = k, () => _theme.MoveUpKey = d.MoveUpKey, false, ref y);
+        KeybindRow("Move down", () => (0, _theme.MoveDownKey), (_, k) => _theme.MoveDownKey = k, () => _theme.MoveDownKey = d.MoveDownKey, false, ref y);
+        KeybindRow("Move left", () => (0, _theme.MoveLeftKey), (_, k) => _theme.MoveLeftKey = k, () => _theme.MoveLeftKey = d.MoveLeftKey, false, ref y);
+        KeybindRow("Move right", () => (0, _theme.MoveRightKey), (_, k) => _theme.MoveRightKey = k, () => _theme.MoveRightKey = d.MoveRightKey, false, ref y);
+
+        y += 8;
+        Button("Reset all keybinds", ModernUI.SubText, ResetKeybinds, ref y);
+        y += 16;
+    }
+
+    private void ResetKeybinds()
+    {
+        var d = new Theme();
+        _theme.SummonMods = d.SummonMods; _theme.SummonKey = d.SummonKey;
+        _theme.CommitKey = d.CommitKey; _theme.CancelKey = d.CancelKey;
+        _theme.MoveUpKey = d.MoveUpKey; _theme.MoveDownKey = d.MoveDownKey;
+        _theme.MoveLeftKey = d.MoveLeftKey; _theme.MoveRightKey = d.MoveRightKey;
+        Emit();
+        Build();
+    }
+
+    private void KeybindRow(string label, Func<(int mods, int key)> get, Action<int, int> apply,
+        Action reset, bool requireMod, ref int y)
+    {
+        var cur = get();
+        _content.Controls.Add(new Label { Text = label, Left = 22, Top = y + 7, AutoSize = true, ForeColor = ModernUI.Text });
+
+        var box = new Label
+        {
+            Left = Cw - 150 - 30,
+            Top = y,
+            Width = 150,
+            Height = 30,
+            Text = DescribeHotkey(cur.mods, cur.key),
+            ForeColor = ModernUI.Text,
+            TextAlign = ContentAlignment.MiddleCenter,
+            BackColor = Color.FromArgb(36, 255, 255, 255),
+            Cursor = Cursors.Hand,
+            Font = new Font("Segoe UI", 8.5f),
+        };
+        box.Click += (_, _) =>
+        {
+            box.Text = "Press keys…";
+            _capApply = apply;
+            _capRequireMod = requireMod;
+            _capBox = box;
+            _hook.Capturing = true;
+        };
+        _content.Controls.Add(box);
+
+        var rst = new Label
+        {
+            Text = "⟲",
+            Left = Cw - 26,
+            Top = y + 3,
+            Width = 24,
+            Height = 24,
+            ForeColor = ModernUI.SubText,
+            Font = new Font("Segoe UI", 13f),
+            TextAlign = ContentAlignment.MiddleCenter,
+            Cursor = Cursors.Hand,
+        };
+        rst.MouseEnter += (_, _) => rst.ForeColor = ModernUI.Text;
+        rst.MouseLeave += (_, _) => rst.ForeColor = ModernUI.SubText;
+        rst.Click += (_, _) => { reset(); Emit(); Build(); };
+        _content.Controls.Add(rst);
+
+        y += 40;
+    }
+
     private void ResetDefaults()
     {
         var d = new Theme();
@@ -172,9 +327,38 @@ internal sealed class SettingsForm : Form, IMessageFilter
         _theme.DotSize = d.DotSize; _theme.DotSpacing = d.DotSpacing;
         _theme.UseWallpaper = d.UseWallpaper; _theme.BlurAmount = d.BlurAmount;
         _theme.TintColor = d.TintColor; _theme.TintStrength = d.TintStrength;
+        _theme.SummonMods = d.SummonMods; _theme.SummonKey = d.SummonKey;
         Emit();
         Build();
     }
+
+    private static string DescribeHotkey(int mods, int key)
+    {
+        var parts = new List<string>();
+        if ((mods & AltTabHook.ModCtrl) != 0) parts.Add("Ctrl");
+        if ((mods & AltTabHook.ModAlt) != 0) parts.Add("Alt");
+        if ((mods & AltTabHook.ModShift) != 0) parts.Add("Shift");
+        if ((mods & AltTabHook.ModWin) != 0) parts.Add("Win");
+        parts.Add(KeyName(key));
+        return string.Join(" + ", parts);
+    }
+
+    private static string KeyName(int vk) => (Keys)vk switch
+    {
+        Keys.Tab => "Tab",
+        Keys.Space => "Space",
+        Keys.Return => "Enter",
+        Keys.Escape => "Esc",
+        Keys.Up => "Up",
+        Keys.Down => "Down",
+        Keys.Left => "Left",
+        Keys.Right => "Right",
+        Keys.Oemtilde => "`",
+        Keys.OemMinus => "-",
+        Keys.Oemplus => "=",
+        >= Keys.D0 and <= Keys.D9 => ((char)('0' + (vk - (int)Keys.D0))).ToString(),
+        var k => k.ToString(),
+    };
 
     private void Section(string text, ref int y)
     {

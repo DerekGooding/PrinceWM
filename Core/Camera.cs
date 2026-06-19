@@ -14,6 +14,7 @@ internal sealed class Camera
 
     private bool _tweening;
     private bool _tweenEaseOut;
+    private float _tweenPow = 5f;
     private float _tweenT, _tweenDur;
     private Vector2 _tweenStartC, _tweenEndC;
     private float _tweenStartZ, _tweenEndZ;
@@ -80,7 +81,7 @@ internal sealed class Camera
 
     public void ZoomStep(float factor) => ZoomAt(Viewport * 0.5f, factor);
 
-    public void TweenTo(Vector2 center, float zoom, float duration, bool easeOut = false)
+    public void TweenTo(Vector2 center, float zoom, float duration, bool easeOut = false, float easeOutPower = 5f)
     {
         _tweenStartC = Center;
         _tweenStartZ = Zoom;
@@ -89,6 +90,7 @@ internal sealed class Camera
         _tweenT = 0f;
         _tweenDur = MathF.Max(0.0001f, duration * DurationScale);
         _tweenEaseOut = easeOut;
+        _tweenPow = easeOutPower;
         _tweening = true;
         _panVel = Vector2.Zero;
         _targetCenter = _tweenEndC;
@@ -157,7 +159,7 @@ internal sealed class Camera
         {
             _tweenT += dt;
             float u = Math.Clamp(_tweenT / _tweenDur, 0f, 1f);
-            float e = _tweenEaseOut ? EaseOut(u) : Smoother(u);
+            float e = _tweenEaseOut ? EaseOutP(u, _tweenPow) : Smoother(u);
             Center = Vector2.Lerp(_tweenStartC, _tweenEndC, e);
 
             Zoom = _tweenStartZ * MathF.Pow(_tweenEndZ / _tweenStartZ, e);
@@ -186,6 +188,8 @@ internal sealed class Camera
     private static float Smoother(float u) => u * u * u * (u * (u * 6f - 15f) + 10f);
 
     private static float EaseOut(float u) { float p = 1f - u; return 1f - p * p * p * p * p; }
+
+    private static float EaseOutP(float u, float power) => 1f - MathF.Pow(1f - u, power);
 
     public Matrix3x2 WorldMatrix =>
         Matrix3x2.CreateTranslation(-Center) *

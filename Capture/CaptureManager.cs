@@ -190,9 +190,22 @@ internal sealed class CaptureManager : IDisposable
         _staticPath = path;
         try
         {
-            using var bmp = new System.Drawing.Bitmap(path);
-            var rect = new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height);
-            var data = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadOnly,
+            // Composite the wallpaper onto an OPAQUE bitmap first. GDI+ loads some JPEGs with
+            // alpha=0, and with premultiplied alpha that makes every pixel transparent (and the
+            // blur effect then renders black) - which is why the wallpaper was invisible. Drawing
+            // onto an opaque surface forces alpha=255, so premultiplied is correct and the blur
+            // works.
+            using var src = new System.Drawing.Bitmap(path);
+            using var opaque = new System.Drawing.Bitmap(src.Width, src.Height,
+                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using (var g = System.Drawing.Graphics.FromImage(opaque))
+            {
+                g.Clear(System.Drawing.Color.Black);
+                g.DrawImage(src, 0, 0, src.Width, src.Height);
+            }
+
+            var rect = new System.Drawing.Rectangle(0, 0, opaque.Width, opaque.Height);
+            var data = opaque.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadOnly,
                 System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
             try
             {
@@ -200,9 +213,9 @@ internal sealed class CaptureManager : IDisposable
                     Vortice.DXGI.Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied),
                     96f, 96f, BitmapOptions.None);
                 _staticWallpaper = _d2d.CreateBitmap(
-                    new Vortice.Mathematics.SizeI(bmp.Width, bmp.Height), data.Scan0, (uint)data.Stride, props);
+                    new Vortice.Mathematics.SizeI(opaque.Width, opaque.Height), data.Scan0, (uint)data.Stride, props);
             }
-            finally { bmp.UnlockBits(data); }
+            finally { opaque.UnlockBits(data); }
         }
         catch (Exception ex) { Core.Log.Ex("Static wallpaper load", ex); }
     }
@@ -229,6 +242,32 @@ internal sealed class CaptureManager : IDisposable
         if (path != null) bmp = LoadD2D(path);
         _snapCache[appKey] = bmp;
         return bmp;
+    }
+
+    /// <summary>Win10 snapshot-on-focus: briefly capture the just-focused window (it's visible, so
+    /// it renders) to grab one good frame and persist its snapshot, then pause it again so the
+    /// capture border goes away. Returns true when finished (got a frame, or the window is gone).
+    /// Called repeatedly by a timer while the overlay is hidden.</summary>
+    public bool FocusSnapshotStep(IntPtr hwnd)
+    {
+        if (!_caps.TryGetValue(hwnd, out var cap) || cap.IsClosed) return true;
+        try
+        {
+            cap.Resume();   // starts a session if it was paused (no-op if already running)
+            cap.Update();   // pull whatever frame is ready
+        }
+        catch { return true; }
+
+        if (cap.HasContent)
+        {
+            SaveSnapshots();
+            cap.Pause();    // drop the capture border again
+            var sb = new System.Text.StringBuilder(80);
+            Native.NativeMethods.GetWindowText(hwnd, sb, sb.Capacity);
+            Core.Log.Write($"focus-snapshot saved: '{sb}'");
+            return true;
+        }
+        return false;
     }
 
     public void SaveSnapshots()
@@ -288,16 +327,47 @@ internal sealed class CaptureManager : IDisposable
         _wallpaper?.Resume();
     }
 
+    // The wallpaper capture runs a free-threaded frame pool on the Wallpaper Engine window. On
+    // Win11 the tile captures stay warm (PauseAll early-returns), but a live capture of the
+    // animated wallpaper is only needed while the canvas is visible. Leaving it running in the
+    // background makes WE a second frame consumer and that causes choppiness on the desktop, so
+    // pause it on hide and resume on open regardless of BorderRemovable.
+    public void PauseWallpaper() => _wallpaper?.Pause();
+
+    public void ResumeWallpaper() => _wallpaper?.Resume();
+
     public void RefreshAll()
     {
+        // Win11 keeps capture sessions alive across opens, so a tile that lacks content is either
+        // minimized or just hasn't rendered a frame yet. Tearing those down and rebuilding the
+        // frame pool every open is ~40-60ms each of pure GPU work that can never succeed (WGC can't
+        // capture a minimized window), and it is what blocks the UI thread long enough to show the
+        // busy cursor. The per-frame Update heal loop already rebuilds genuinely dead captures, so
+        // here only the truly closed ones need a synchronous refresh. Win10 path is unchanged.
+        bool win11 = Native.NativeMethods.IsWindows11;
         foreach (var cap in _caps.Values)
         {
-            if (cap.IsClosed || !cap.HasContent) cap.Refresh();
+            if (cap.IsClosed || (!win11 && !cap.HasContent)) cap.Refresh();
             else cap.Resume();
         }
     }
 
     public void ResetHeal() => _healAttempts.Clear();
+
+    /// <summary>Diagnostic dump of every capture's state - for tracking down blank tiles.</summary>
+    public void LogState(string when)
+    {
+        Core.Log.Write($"--- captures @ {when} (border-removable={WindowCapture.BorderRemovable}, win11={Native.NativeMethods.IsWindows11}) ---");
+        foreach (var (h, cap) in _caps)
+        {
+            var sb = new System.Text.StringBuilder(80);
+            Native.NativeMethods.GetWindowText(h, sb, sb.Capacity);
+            Core.Log.Write(
+                $"  '{sb}' content={cap.HasContent} frames={cap.DiagFramesSeen} pending={cap.DiagHasPending} " +
+                $"black={cap.DiagPendingBlack} empty={cap.DiagEmptyUpdates} pool={cap.DiagPool} closed={cap.IsClosed} " +
+                $"iconic={Native.NativeMethods.IsIconic(h)} cloaked={Native.NativeMethods.IsWindowCloaked(h)}");
+        }
+    }
 
     public void Clear()
     {

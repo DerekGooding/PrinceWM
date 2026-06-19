@@ -28,7 +28,9 @@ internal static class LayoutManager
         else
             foreach (var it in toPlace)
             {
-                it.WorldPos = FindFreeSpot(it, placed, obstacles);
+                it.WorldPos = saved.TryGetValue(it.AppKey, out var want)
+                    ? FindNearestFree(it, want, placed, obstacles)
+                    : FindFreeSpot(it, placed, obstacles);
                 placed.Add(it);
             }
 
@@ -64,6 +66,35 @@ internal static class LayoutManager
             minY = MathF.Min(minY, p.WorldPos.Y);
         }
         return new Vector2(maxX + Gap, minY);
+    }
+
+    private static Vector2 FindNearestFree(WindowItem it, Vector2 desired, List<WindowItem> placed,
+        List<(Vector2 pos, Vector2 size)>? obstacles)
+    {
+        if (!Collides(desired, it.WorldSize, placed, obstacles)) return desired;
+
+        float stepX = (it.WorldSize.X + Gap) * 0.5f;
+        float stepY = (it.WorldSize.Y + Gap) * 0.5f;
+
+        for (int ring = 1; ring <= 30; ring++)
+        {
+            int samples = ring * 8;
+            Vector2 best = default;
+            float bestDist = float.MaxValue;
+            for (int s = 0; s < samples; s++)
+            {
+                float ang = s * (MathF.PI * 2f) / samples;
+                var pos = new Vector2(
+                    desired.X + MathF.Cos(ang) * ring * stepX,
+                    desired.Y + MathF.Sin(ang) * ring * stepY);
+                if (Collides(pos, it.WorldSize, placed, obstacles)) continue;
+                float d = Vector2.DistanceSquared(pos, desired);
+                if (d < bestDist) { bestDist = d; best = pos; }
+            }
+            if (bestDist < float.MaxValue) return best;
+        }
+
+        return FindFreeSpot(it, placed, obstacles);
     }
 
     private static int[] ShuffledSides()

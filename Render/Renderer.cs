@@ -263,7 +263,10 @@ internal sealed class Renderer : IDisposable
         ID2D1Bitmap? wallpaper = null, int hoverIndex = -1, bool hoverClose = false, float dt = 0f,
         IReadOnlyList<Pin>? pins = null, int hoverPinIndex = -1, bool hoverPinClose = false,
         string? editingPinId = null, string? resizePinId = null, DrawState? draw = null,
-        int snapTargetIndex = -1)
+        int snapTargetIndex = -1,
+        IReadOnlyList<Workspace>? workspaces = null,
+        Vector2? connectFrom = null, Vector2? connectTo = null, float tintFade = 1f,
+        IReadOnlyList<GhostTile>? ghosts = null)
     {
         StepHoverSprings(items, hoverIndex, commitFade, dt);
         if (draw != null) StepButtonSprings(draw, dt);
@@ -284,10 +287,25 @@ internal sealed class Renderer : IDisposable
         if (draw?.Strokes != null && (draw.Strokes.Count > 0 || draw.InProgress != null))
             DrawStrokesWorld(draw.Strokes, draw.InProgress, camera.Zoom, otherOpacity);
 
+        Dictionary<string, int>? wsTint = null;
+        if (workspaces != null && workspaces.Count > 0)
+        {
+            wsTint = new(StringComparer.Ordinal);
+            foreach (var ws in workspaces)
+                foreach (var m in ws.Members) wsTint[m] = ws.Tint;
+            DrawWorkspaceLinks(workspaces, items, ghosts, otherOpacity, camera.Zoom);
+        }
+        if (ghosts != null && ghosts.Count > 0)
+            DrawGhosts(ghosts, camera.Zoom, otherOpacity);
+
         int highlightIndex = hoverIndex >= 0 ? hoverIndex : selectedIndex;
         for (int i = 0; i < items.Count; i++)
             if (i != selectedIndex)
-                DrawTile(items[i], i == highlightIndex, camera.Zoom, bitmapProvider(items[i].Hwnd), otherOpacity, Fade(items[i].Hwnd), _lifts[i]);
+            {
+                int tintRgb = -1; float tintA = 0f;
+                if (wsTint != null && wsTint.TryGetValue(items[i].AppKey, out var tc)) { tintRgb = tc; tintA = 0.16f * tintFade; }
+                DrawTile(items[i], i == highlightIndex, camera.Zoom, bitmapProvider(items[i].Hwnd), otherOpacity, Fade(items[i].Hwnd), _lifts[i], 1f, 1f, tintRgb, tintA);
+            }
         if (selectedIndex >= 0 && selectedIndex < items.Count)
         {
 
@@ -295,16 +313,27 @@ internal sealed class Renderer : IDisposable
             float highlightFade = 1f - (ct * ct * (3f - 2f * ct));
             float cc = Math.Clamp(commitFade / 0.9f, 0f, 1f);
             float cornerScale = 1f - (cc * cc * (3f - 2f * cc));
-            DrawTile(items[selectedIndex], selectedIndex == highlightIndex, camera.Zoom, bitmapProvider(items[selectedIndex].Hwnd), globalOpacity, Fade(items[selectedIndex].Hwnd), _lifts[selectedIndex], highlightFade, cornerScale);
+            float selLift = _lifts[selectedIndex] + (1f - _lifts[selectedIndex]) * commitFade;
+            int stint = -1; float stintA = 0f;
+            if (wsTint != null && wsTint.TryGetValue(items[selectedIndex].AppKey, out var sc)) { stint = sc; stintA = 0.16f * tintFade * (1f - commitFade); }
+            DrawTile(items[selectedIndex], selectedIndex == highlightIndex, camera.Zoom, bitmapProvider(items[selectedIndex].Hwnd), globalOpacity, Fade(items[selectedIndex].Hwnd), selLift, highlightFade, cornerScale, stint, stintA);
         }
 
         if (snapTargetIndex >= 0 && snapTargetIndex < items.Count)
             DrawSnapTarget(items[snapTargetIndex], camera.Zoom, otherOpacity);
 
+        if (connectFrom.HasValue && connectTo.HasValue)
+        {
+            SetDyn(Theme.Rgb(150, 160, 178), 0.85f * globalOpacity);
+            _d2d.DrawLine(connectFrom.Value, connectTo.Value, _dyn, 3f / MathF.Max(camera.Zoom, 0.01f), _roundStroke);
+        }
+
         if (pins != null && pins.Count > 0)
             DrawPinsWorld(camera, pins, editingPinId, resizePinId, CaretOn(), otherOpacity);
 
         _d2d.Transform = Matrix3x2.Identity;
+        if (workspaces != null && workspaces.Count > 0)
+            DrawWorkspaceLabels(camera, workspaces, items, ghosts, (1f - commitFade) * globalOpacity);
         DrawTileChrome(camera, items, hoverIndex, hoverClose, (1f - commitFade) * globalOpacity);
         if (pins != null && pins.Count > 0)
             DrawPinChrome(camera, pins, hoverPinIndex, hoverPinClose, (1f - commitFade) * globalOpacity);
@@ -364,6 +393,8 @@ internal sealed class Renderer : IDisposable
         catch (Exception ex) { Core.Log.Ex("Screenshot", ex); }
     }
 
+    private bool _wpBlurBroken;
+
     private void DrawWallpaper(ID2D1Bitmap wallpaper)
     {
         var size = wallpaper.Size;
@@ -372,14 +403,26 @@ internal sealed class Renderer : IDisposable
         float scale = MathF.Max(_width / size.Width, _height / size.Height);
         float ox = (_width - size.Width * scale) * 0.5f;
         float oy = (_height - size.Height * scale) * 0.5f;
+        var dest = new Rect(ox, oy, size.Width * scale, size.Height * scale);
 
-        _blur ??= new Vortice.Direct2D1.Effects.GaussianBlur(_d2d);
-        _blur.SetInput(0, wallpaper, true);
-        _blur.StandardDeviation = _theme.BlurAmount;
+        // Sharp base so the wallpaper always shows, then the blurred version on top when enabled
+        // and the effect works (falls back to the sharp image if the blur ever throws).
+        ((ID2D1RenderTarget)_d2d).DrawBitmap(wallpaper, dest, 1f, BitmapInterpolationMode.Linear,
+            new Rect(0, 0, size.Width, size.Height));
 
-        _d2d.Transform = Matrix3x2.CreateScale(scale) * Matrix3x2.CreateTranslation(ox, oy);
-        _d2d.DrawImage(_blur);
-        _d2d.Transform = Matrix3x2.Identity;
+        if (_theme.BlurAmount > 0 && !_wpBlurBroken)
+        {
+            try
+            {
+                _blur ??= new Vortice.Direct2D1.Effects.GaussianBlur(_d2d);
+                _blur.SetInput(0, wallpaper, true);
+                _blur.StandardDeviation = _theme.BlurAmount;
+                _d2d.Transform = Matrix3x2.CreateScale(scale) * Matrix3x2.CreateTranslation(ox, oy);
+                _d2d.DrawImage(_blur);
+                _d2d.Transform = Matrix3x2.Identity;
+            }
+            catch (Exception ex) { _wpBlurBroken = true; Core.Log.Ex("WallpaperBlur", ex); }
+        }
 
         if (_theme.TintStrength > 0)
         {
@@ -966,6 +1009,92 @@ internal sealed class Renderer : IDisposable
         _borderSel.Opacity = 1f;
     }
 
+    private void DrawWorkspaceLinks(IReadOnlyList<Workspace> workspaces, IReadOnlyList<WindowItem> items,
+        IReadOnlyList<GhostTile>? ghosts, float opacity, float zoom)
+    {
+        if (opacity <= 0.01f) return;
+        var center = new Dictionary<string, Vector2>(StringComparer.Ordinal);
+        foreach (var it in items) center[it.AppKey] = it.WorldCenter;
+        if (ghosts != null) foreach (var g in ghosts) center[g.AppKey] = g.Center;
+        float w = 3.5f / MathF.Max(zoom, 0.01f);
+        foreach (var ws in workspaces)
+        {
+            SetDyn(ws.Tint, 0.65f * opacity);
+            foreach (var l in ws.Links)
+                if (center.TryGetValue(l.A, out var a) && center.TryGetValue(l.B, out var b))
+                {
+                    _d2d.DrawLine(a, b, _dyn, w, _roundStroke);
+                    _d2d.FillEllipse(new Ellipse(a, w * 1.3f, w * 1.3f), _dyn);
+                    _d2d.FillEllipse(new Ellipse(b, w * 1.3f, w * 1.3f), _dyn);
+                }
+        }
+    }
+
+    private void DrawGhosts(IReadOnlyList<GhostTile> ghosts, float zoom, float opacity)
+    {
+        if (opacity <= 0.01f) return;
+        float bw = 2.5f / MathF.Max(zoom, 0.01f);
+        foreach (var g in ghosts)
+        {
+            var rect = new Rect(g.Pos.X, g.Pos.Y, g.Size.X, g.Size.Y);
+            float r = _theme.CornerRadius;
+            var rr = new RoundedRectangle { Rect = rect, RadiusX = r, RadiusY = r };
+            SetDyn(Theme.Rgb(16, 18, 23), 0.62f * opacity);
+            _d2d.FillRoundedRectangle(rr, _dyn);
+            SetDyn(g.Tint, 0.7f * opacity);
+            _d2d.DrawRoundedRectangle(rr, _dyn, bw);
+
+            _text.Opacity = 0.85f * opacity;
+            var titleRect = new Rect(rect.X + 12f, rect.Y + g.Size.Y * 0.5f - 26f, rect.Right - 12f, rect.Y + g.Size.Y * 0.5f);
+            _d2d.DrawText(g.Title, _titleFormat, titleRect, _text, DrawTextOptions.Clip);
+            _textDim.Opacity = 0.8f * opacity;
+            var hintRect = new Rect(rect.X + 12f, rect.Y + g.Size.Y * 0.5f + 2f, rect.Right - 12f, rect.Y + g.Size.Y * 0.5f + 26f);
+            _d2d.DrawText("closed — click to reopen", _hintFormat, hintRect, _textDim, DrawTextOptions.Clip);
+        }
+    }
+
+    private readonly List<(string id, System.Drawing.RectangleF rect)> _wsLabelRects = new();
+    public IReadOnlyList<(string id, System.Drawing.RectangleF rect)> WorkspaceLabelRects => _wsLabelRects;
+
+    private void DrawWorkspaceLabels(Camera cam, IReadOnlyList<Workspace> workspaces,
+        IReadOnlyList<WindowItem> items, IReadOnlyList<GhostTile>? ghosts, float opacity)
+    {
+        _wsLabelRects.Clear();
+        if (opacity <= 0.01f) return;
+        var map = new Dictionary<string, (float cx, float top)>(StringComparer.Ordinal);
+        foreach (var it in items) map[it.AppKey] = (it.WorldCenter.X, it.WorldPos.Y);
+        if (ghosts != null) foreach (var g in ghosts) map[g.AppKey] = (g.Center.X, g.Pos.Y);
+
+        foreach (var ws in workspaces)
+        {
+            float sumX = 0f, minTop = float.MaxValue; int n = 0;
+            foreach (var m in ws.Members)
+                if (map.TryGetValue(m, out var pt))
+                {
+                    sumX += pt.cx; n++;
+                    if (pt.top < minTop) minTop = pt.top;
+                }
+            if (n == 0) continue;
+
+            Vector2 sp = cam.WorldToScreen(new Vector2(sumX / n, minTop));
+            using var layout = _dwrite.CreateTextLayout(ws.Name, _titleFormat, 4000f, 200f);
+            var mt = layout.Metrics;
+            float padX = 13f, padY = 5f;
+            float w = mt.Width + padX * 2f, h = mt.Height + padY * 2f;
+            var pill = new Rect(sp.X - w * 0.5f, sp.Y - h - 10f, w, h);
+            _wsLabelRects.Add((ws.Id, new System.Drawing.RectangleF(pill.X, pill.Y, pill.Width, pill.Height)));
+
+            var rr = new RoundedRectangle { Rect = pill, RadiusX = h * 0.5f, RadiusY = h * 0.5f };
+            SetDyn(ws.Tint, 0.96f * opacity);
+            _d2d.FillRoundedRectangle(rr, _dyn);
+
+            int rr8 = (ws.Tint >> 16) & 0xFF, gg = (ws.Tint >> 8) & 0xFF, bb = ws.Tint & 0xFF;
+            float lum = (0.299f * rr8 + 0.587f * gg + 0.114f * bb) / 255f;
+            SetDyn(lum > 0.62f ? Theme.Rgb(18, 20, 24) : Theme.Rgb(240, 243, 248), opacity);
+            _d2d.DrawText(ws.Name, _titleFormat, pill, _dyn, DrawTextOptions.None);
+        }
+    }
+
     private static bool AspectClose(ID2D1Bitmap bmp, Rect rect)
     {
         var size = bmp.Size;
@@ -1010,7 +1139,8 @@ internal sealed class Renderer : IDisposable
     }
 
     private void DrawTile(WindowItem it, bool highlight, float zoom, ID2D1Bitmap? content,
-        float opacity, float contentFade, float lift = 1f, float highlightFade = 1f, float cornerScale = 1f)
+        float opacity, float contentFade, float lift = 1f, float highlightFade = 1f, float cornerScale = 1f,
+        int tintRgb = -1, float tintAlpha = 0f)
     {
         if (opacity <= 0.003f) return;
 
@@ -1051,6 +1181,12 @@ internal sealed class Renderer : IDisposable
 
         if (useLive && contentFade > 0.003f)
             DrawTileBitmap(content!, rect, rounded, opacity * contentFade);
+
+        if (tintRgb >= 0 && tintAlpha > 0.001f)
+        {
+            SetDyn(tintRgb, tintAlpha * opacity);
+            _d2d.FillRoundedRectangle(rounded, _dyn);
+        }
 
         if (highlight && _theme.GlowIntensity > 0 && highlightFade > 0.001f)
         {

@@ -73,7 +73,10 @@ internal static class WindowScanner
             }
             else
             {
-                if (!GetWindowRect(hWnd, out RECT r)) return true;
+                RECT r;
+                if (GetExtendedFrameBounds(hWnd, out RECT efb) && efb.Width > 0 && efb.Height > 0)
+                    r = efb;
+                else if (!GetWindowRect(hWnd, out r)) return true;
                 x = r.Left; y = r.Top; w = r.Width; h = r.Height;
             }
             if (w <= 0 || h <= 0) { w = 960; h = 600; }
@@ -151,7 +154,7 @@ internal static class WindowScanner
         return sb.ToString();
     }
 
-    public static void Activate(IntPtr hWnd)
+    public static bool Activate(IntPtr hWnd)
     {
         if (IsIconic(hWnd))
             ShowWindow(hWnd, SW_RESTORE);
@@ -167,10 +170,12 @@ internal static class WindowScanner
         SystemParametersInfoSet(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, IntPtr.Zero, 0); // in-memory, no broadcast
 
         BringWindowToTop(hWnd);
-        SetForegroundWindow(hWnd);
+        bool ok = SetForegroundWindow(hWnd);
 
         if (gotTimeout)
             SystemParametersInfoSet(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, (IntPtr)prevTimeout, 0);
+
+        return ok;
     }
 
     private static IntPtr GetForegroundWindowSafe()

@@ -116,6 +116,8 @@ internal static class NativeMethods
         return sb.ToString();
     }
 
+    public static string WindowClass(IntPtr h) => ClassNameOf(h);
+
     private static bool CoversMonitor(RECT r)
     {
         foreach (var sc in System.Windows.Forms.Screen.AllScreens)
@@ -238,6 +240,33 @@ internal static class NativeMethods
     [DllImport("kernel32.dll")]
     public static extern uint GetCurrentThreadId();
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool QueryFullProcessImageName(IntPtr hProcess, uint flags,
+        System.Text.StringBuilder buffer, ref uint size);
+
+    [DllImport("kernel32.dll")]
+    public static extern bool CloseHandle(IntPtr h);
+
+    public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+
+    public static string ProcessPath(IntPtr hWnd)
+    {
+        GetWindowThreadProcessId(hWnd, out uint pid);
+        if (pid == 0) return "";
+        IntPtr h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        if (h == IntPtr.Zero) return "";
+        try
+        {
+            var sb = new System.Text.StringBuilder(1024);
+            uint size = 1024;
+            return QueryFullProcessImageName(h, 0, sb, ref size) ? sb.ToString() : "";
+        }
+        finally { CloseHandle(h); }
+    }
+
     [DllImport("user32.dll")]
     public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
 
@@ -312,6 +341,7 @@ internal static class NativeMethods
     }
 
     public const uint LLKHF_ALTDOWN = 0x20;
+    public const uint LLKHF_INJECTED = 0x10;
 
     public const uint VK_TAB = 0x09;
     public const uint VK_RETURN = 0x0D;
@@ -327,6 +357,11 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern short GetAsyncKeyState(int vKey);
+
+    [DllImport("user32.dll")]
+    public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+
+    public const uint KEYEVENTF_KEYUP = 0x0002;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT
@@ -370,6 +405,7 @@ internal static class NativeMethods
     public const uint RDW_ALLCHILDREN = 0x0080;
 
     public static readonly IntPtr HWND_TOP = IntPtr.Zero;
+    public static readonly IntPtr HWND_TOPMOST = new(-1);
     public const uint SWP_NOSIZE = 0x0001;
     public const uint SWP_NOMOVE = 0x0002;
     public const uint SWP_NOZORDER = 0x0004;
