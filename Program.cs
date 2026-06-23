@@ -1,3 +1,5 @@
+using PrinceWM.UI;
+
 namespace PrinceWM;
 
 internal static class Program
