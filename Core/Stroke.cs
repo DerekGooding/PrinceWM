@@ -2,10 +2,6 @@ using System.Numerics;
 
 namespace PrinceWM.Core;
 
-internal enum StrokeKind { Free, Line, Rect, Ellipse }
-
-internal enum DrawTool { Pen, Line, Rect, Ellipse, Fill, Eraser }
-
 internal sealed class Stroke
 {
     public StrokeKind Kind { get; set; }
@@ -44,16 +40,4 @@ internal sealed class Stroke
         }
         return false;
     }
-}
-
-internal sealed class DrawState
-{
-    public bool Active;
-    public DrawTool Tool;
-    public int Color = 0xFFFFFF;
-    public float Size = 4f;
-    public IReadOnlyList<Stroke>? Strokes;
-    public Stroke? InProgress;
-    public bool HoverToggle;
-    public int HoverButton = -1;
 }

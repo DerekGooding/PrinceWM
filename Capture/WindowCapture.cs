@@ -126,7 +126,7 @@ internal sealed class WindowCapture : IDisposable
         if (_disposed || !_paused) return;
         _paused = false;
         if (_closed) return;
-        try { StartSession(); } catch (Exception ex) { Core.Log.Ex("Resume capture", ex); }
+        try { StartSession(); } catch (Exception ex) { Log.Ex("Resume capture", ex); }
     }
 
     public void Refresh()
@@ -138,7 +138,7 @@ internal sealed class WindowCapture : IDisposable
         try { _pool?.Dispose(); } catch { }
         _session = null;
         _pool = null;
-        try { StartSession(); } catch (Exception ex) { Core.Log.Ex("Refresh capture", ex); }
+        try { StartSession(); } catch (Exception ex) { Log.Ex("Refresh capture", ex); }
     }
 
     public void Update()
@@ -332,7 +332,7 @@ internal sealed class WindowCapture : IDisposable
             }
             finally { _ctx.Unmap(staging, 0); }
         }
-        catch (Exception ex) { Core.Log.Ex("ReadGoodBitmap", ex); return null; }
+        catch (Exception ex) { Log.Ex("ReadGoodBitmap", ex); return null; }
     }
 
     public void Dispose()

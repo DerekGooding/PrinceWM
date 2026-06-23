@@ -1,34 +1,5 @@
 namespace PrinceWM.Core;
 
-internal sealed class WsLink
-{
-    public string A { get; set; } = "";
-    public string B { get; set; } = "";
-}
-
-internal sealed class GhostInfo
-{
-    public string Title { get; set; } = "";
-    public string Exe { get; set; } = "";
-    public float X { get; set; }
-    public float Y { get; set; }
-    public float W { get; set; }
-    public float H { get; set; }
-}
-
-internal sealed class GhostTile
-{
-    public string AppKey = "";
-    public string Title = "";
-    public string Exe = "";
-    public int Tint;
-    public System.Numerics.Vector2 Pos;
-    public System.Numerics.Vector2 Size;
-    public System.Numerics.Vector2 Center => Pos + Size * 0.5f;
-    public bool Contains(System.Numerics.Vector2 p) =>
-        p.X >= Pos.X && p.Y >= Pos.Y && p.X <= Pos.X + Size.X && p.Y <= Pos.Y + Size.Y;
-}
-
 internal sealed class Workspace
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");

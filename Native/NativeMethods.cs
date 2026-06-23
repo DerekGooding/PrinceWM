@@ -120,7 +120,7 @@ internal static class NativeMethods
 
     private static bool CoversMonitor(RECT r)
     {
-        foreach (var sc in System.Windows.Forms.Screen.AllScreens)
+        foreach (var sc in Screen.AllScreens)
         {
             var b = sc.Bounds;
             if (Math.Abs(r.Left - b.Left) <= 6 && Math.Abs(r.Top - b.Top) <= 6 &&
@@ -164,12 +164,12 @@ internal static class NativeMethods
         var sb = new System.Text.StringBuilder(520);
         SystemParametersInfo(0x0073, (uint)sb.Capacity, sb, 0);
         string p = sb.ToString();
-        if (!string.IsNullOrEmpty(p) && System.IO.File.Exists(p)) return p;
+        if (!string.IsNullOrEmpty(p) && File.Exists(p)) return p;
 
-        string td = System.IO.Path.Combine(
+        string td = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Microsoft", "Windows", "Themes", "TranscodedWallpaper");
-        return System.IO.File.Exists(td) ? td : p;
+        return File.Exists(td) ? td : p;
     }
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
@@ -194,7 +194,7 @@ internal static class NativeMethods
 
     public static bool GetExtendedFrameBounds(IntPtr hWnd, out RECT rect) =>
     DwmGetWindowAttribute(hWnd, DWMWA_EXTENDED_FRAME_BOUNDS, out rect,
-        System.Runtime.InteropServices.Marshal.SizeOf<RECT>()) == 0;
+        Marshal.SizeOf<RECT>()) == 0;
 
     public static bool IsWindowCloaked(IntPtr hWnd) =>
     DwmGetWindowAttribute(hWnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) == 0 && cloaked != 0;

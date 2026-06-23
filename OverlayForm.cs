@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Numerics;
 using PrinceWM.Capture;
-using PrinceWM.Core;
 using PrinceWM.Native;
 using PrinceWM.Render;
 
@@ -148,7 +147,7 @@ internal sealed class OverlayForm : Form
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
-        BackColor = System.Drawing.Color.Black;
+        BackColor = Color.Black;
         DoubleBuffered = false;
 
         TopMost = true;
@@ -188,7 +187,7 @@ internal sealed class OverlayForm : Form
         menu.Items.Add("Exit", null, (_, _) => Application.Exit());
         _tray = new NotifyIcon
         {
-            Icon = appIcon ?? System.Drawing.SystemIcons.Application,
+            Icon = appIcon ?? SystemIcons.Application,
             Text = "PrinceWM - Alt+Tab canvas",
             Visible = true,
             ContextMenuStrip = menu,
@@ -225,17 +224,17 @@ internal sealed class OverlayForm : Form
 
         TaskDialogButton result;
         try { result = TaskDialog.ShowDialog(page); }
-        catch (Exception ex) { Core.Log.Ex("UpdateChecker.ShowDialog", ex); return; }
+        catch (Exception ex) { Log.Ex("UpdateChecker.ShowDialog", ex); return; }
 
         if (page.Verification.Checked) UpdateChecker.DisableForever();
         if (result == download)
         {
             try
             {
-                System.Diagnostics.Process.Start(
+                Process.Start(
                     new System.Diagnostics.ProcessStartInfo(UpdateChecker.ReleasesUrl) { UseShellExecute = true });
             }
-            catch (Exception ex) { Core.Log.Ex("UpdateChecker.OpenUrl", ex); }
+            catch (Exception ex) { Log.Ex("UpdateChecker.OpenUrl", ex); }
         }
     }
 
@@ -244,7 +243,7 @@ internal sealed class OverlayForm : Form
         try
         {
             string? path = Environment.ProcessPath;
-            return path != null ? System.Drawing.Icon.ExtractAssociatedIcon(path) : null;
+            return path != null ? Icon.ExtractAssociatedIcon(path) : null;
         }
         catch { return null; }
     }
@@ -454,7 +453,7 @@ internal sealed class OverlayForm : Form
             _pins.Add(new Pin { Kind = PinKind.Image, ImageFile = file, X = p0.X, Y = p0.Y, W = w, H = h });
             PinStore.Save(_pins);
         }
-        catch (Exception ex) { Core.Log.Ex("PasteAt", ex); }
+        catch (Exception ex) { Log.Ex("PasteAt", ex); }
     }
 
     private void NewNoteAt(Point screen)
@@ -482,7 +481,7 @@ internal sealed class OverlayForm : Form
         _draw.HoverToggle = _renderer != null && _renderer.DrawToggleRect.Contains(p);
         _draw.HoverButton = -1;
         if (_draw.Active && _renderer != null)
-            for (int i = 0; i < Render.Renderer.ToolButtonCount; i++)
+            for (int i = 0; i < Renderer.ToolButtonCount; i++)
                 if (_renderer.ToolButtonRect(i).Contains(p)) { _draw.HoverButton = i; break; }
     }
 
@@ -515,7 +514,7 @@ internal sealed class OverlayForm : Form
     private void HandleDrawDown(MouseEventArgs e)
     {
         if (e.Button == MouseButtons.Left && _renderer != null)
-            for (int i = 0; i < Render.Renderer.ToolButtonCount; i++)
+            for (int i = 0; i < Renderer.ToolButtonCount; i++)
                 if (_renderer.ToolButtonRect(i).Contains(e.Location)) { ToolbarClick(i); return; }
 
         if (e.Button == MouseButtons.Right) { _drawPanning = true; _lastMouse = e.Location; return; }
@@ -591,7 +590,7 @@ internal sealed class OverlayForm : Form
     }
 
     private static System.Drawing.Color FromRgb(int rgb) =>
-        System.Drawing.Color.FromArgb((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+        Color.FromArgb((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
     private static int ToRgb(System.Drawing.Color c) => (c.R << 16) | (c.G << 8) | c.B;
 
     private void GrowNoteIfNeeded(Pin note)
@@ -608,8 +607,8 @@ internal sealed class OverlayForm : Form
     {
         var menu = new ContextMenuStrip
         {
-            BackColor = System.Drawing.Color.FromArgb(28, 30, 36),
-            ForeColor = System.Drawing.Color.White,
+            BackColor = Color.FromArgb(28, 30, 36),
+            ForeColor = Color.White,
             ShowImageMargin = false,
             Font = new System.Drawing.Font("Segoe UI", 9f),
         };
@@ -629,8 +628,8 @@ internal sealed class OverlayForm : Form
     {
         var menu = new ContextMenuStrip
         {
-            BackColor = System.Drawing.Color.FromArgb(28, 30, 36),
-            ForeColor = System.Drawing.Color.White,
+            BackColor = Color.FromArgb(28, 30, 36),
+            ForeColor = Color.White,
             ShowImageMargin = false,
             Font = new System.Drawing.Font("Segoe UI", 9f),
         };
@@ -700,9 +699,9 @@ internal sealed class OverlayForm : Form
         try
         {
             if (!string.IsNullOrEmpty(g.Exe) && File.Exists(g.Exe))
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(g.Exe) { UseShellExecute = true });
+                Process.Start(new System.Diagnostics.ProcessStartInfo(g.Exe) { UseShellExecute = true });
         }
-        catch (Exception ex) { Core.Log.Ex("ghost launch", ex); }
+        catch (Exception ex) { Log.Ex("ghost launch", ex); }
         HideOverlay();
     }
 
@@ -820,8 +819,8 @@ internal sealed class OverlayForm : Form
     {
         var menu = new ContextMenuStrip
         {
-            BackColor = System.Drawing.Color.FromArgb(28, 30, 36),
-            ForeColor = System.Drawing.Color.White,
+            BackColor = Color.FromArgb(28, 30, 36),
+            ForeColor = Color.White,
             ShowImageMargin = false,
             Font = new System.Drawing.Font("Segoe UI", 9f),
         };
@@ -842,8 +841,8 @@ internal sealed class OverlayForm : Form
             ClientSize = new System.Drawing.Size(320, 96),
             MaximizeBox = false,
             MinimizeBox = false,
-            BackColor = System.Drawing.Color.FromArgb(28, 30, 36),
-            ForeColor = System.Drawing.Color.White,
+            BackColor = Color.FromArgb(28, 30, 36),
+            ForeColor = Color.White,
             TopMost = true,
         };
         var box = new TextBox { Left = 14, Top = 18, Width = 292, Text = initial };
@@ -867,7 +866,7 @@ internal sealed class OverlayForm : Form
             Vector2 br = _camera.WorldToScreen(_pins[i].Pos + _pins[i].SizeV);
             var s = new System.Drawing.RectangleF(tl.X, tl.Y, br.X - tl.X, br.Y - tl.Y);
             if (s.Width < 30f || s.Height < 24f) continue;
-            var cr = Render.Renderer.CloseButtonRect(s.X, s.Y, s.Width, s.Height);
+            var cr = Renderer.CloseButtonRect(s.X, s.Y, s.Width, s.Height);
             if (cr.Contains(p.X, p.Y)) { _hoverPin = i; _hoverPinClose = true; return; }
             if (s.Contains(p.X, p.Y)) { _hoverPin = i; _hoverPinClose = false; return; }
         }
@@ -1132,13 +1131,13 @@ internal sealed class OverlayForm : Form
         int tries = 0;
         while (NativeMethods.GetForegroundWindow() != hwnd && tries < 4)
         {
-            System.Threading.Thread.Sleep(8);
+            Thread.Sleep(8);
             ok = WindowScanner.Activate(hwnd);
             tries++;
         }
         IntPtr fg = NativeMethods.GetForegroundWindow();
         if (fg != hwnd)
-            Core.Log.Write($"commit MISS target=0x{hwnd:X} sfw={ok} fg=0x{fg:X} tries={tries}");
+            Log.Write($"commit MISS target=0x{hwnd:X} sfw={ok} fg=0x{fg:X} tries={tries}");
     }
 
     private static void ApplyTunables()
@@ -1174,10 +1173,10 @@ internal sealed class OverlayForm : Form
         try
         {
             NativeMethods.GetWindowThreadProcessId(weWindow, out uint pid);
-            using var p = System.Diagnostics.Process.GetProcessById((int)pid);
+            using var p = Process.GetProcessById((int)pid);
             string? exe = p.MainModule?.FileName;
             if (string.IsNullOrEmpty(exe)) return;
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, "-control play")
+            Process.Start(new System.Diagnostics.ProcessStartInfo(exe, "-control play")
             {
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -1345,7 +1344,7 @@ internal sealed class OverlayForm : Form
             {
                 SendCleanEscape();
                 for (int i = 0; i < 12 && IsFullscreenWindow(fg); i++)
-                    System.Threading.Thread.Sleep(8);
+                    Thread.Sleep(8);
             }
 
             BumpMru(NativeMethods.GetForegroundWindow());
@@ -1362,7 +1361,7 @@ internal sealed class OverlayForm : Form
         catch (Exception ex)
         {
 
-            Core.Log.Write($"EX OpenCanvas: {ex}");
+            Log.Write($"EX OpenCanvas: {ex}");
             CloseOverlay(false);
             _tray.BalloonTipTitle = "PrinceWM error";
             _tray.BalloonTipText = ex.Message;
@@ -1471,9 +1470,9 @@ internal sealed class OverlayForm : Form
     private void TakeScreenshot()
     {
         if (_renderer == null) return;
-        string dir = System.IO.Path.Combine(
+        string dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "PrinceWM");
-        string path = System.IO.Path.Combine(dir, $"PrinceWM_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+        string path = Path.Combine(dir, $"PrinceWM_{DateTime.Now:yyyyMMdd_HHmmss}.png");
         _renderer.RequestScreenshot(path);
         _tray.BalloonTipTitle = "Screenshot copied";
         _tray.BalloonTipText = "On the clipboard, and saved to " + path;
@@ -1604,7 +1603,7 @@ internal sealed class OverlayForm : Form
         {
             var s = _renderer.LiftedTileScreenRect(_camera, _items, i);
             if (s.Width < 60f || s.Height < 40f) continue;
-            var cr = Render.Renderer.CloseButtonRect(s.X, s.Y, s.Width, s.Height);
+            var cr = Renderer.CloseButtonRect(s.X, s.Y, s.Width, s.Height);
             if (cr.Contains(p.X, p.Y)) { _hoverIndex = i; _hoverClose = true; return; }
             if (s.Contains(p.X, p.Y)) { _hoverIndex = i; _hoverClose = false; return; }
         }
@@ -1645,8 +1644,8 @@ internal sealed class OverlayForm : Form
 
         var menu = new ContextMenuStrip
         {
-            BackColor = System.Drawing.Color.FromArgb(28, 30, 36),
-            ForeColor = System.Drawing.Color.White,
+            BackColor = Color.FromArgb(28, 30, 36),
+            ForeColor = Color.White,
             ShowImageMargin = false,
             Font = new System.Drawing.Font("Segoe UI", 9f),
         };
@@ -1686,7 +1685,7 @@ internal sealed class OverlayForm : Form
         if (_rescanT >= 0.35f)
         {
             _rescanT = 0f;
-            try { RescanIfChanged(); } catch (Exception ex) { Core.Log.Ex("Rescan", ex); }
+            try { RescanIfChanged(); } catch (Exception ex) { Log.Ex("Rescan", ex); }
         }
 
         try
@@ -1742,7 +1741,7 @@ internal sealed class OverlayForm : Form
         catch (Exception ex)
         {
 
-            Core.Log.Ex("Frame", ex);
+            Log.Ex("Frame", ex);
         }
 
         if (finalizeCommit) FinalizeCommit();
@@ -1947,7 +1946,7 @@ internal sealed class OverlayForm : Form
             _camera.PanByScreen(delta);
 
             long now = _clock.ElapsedTicks;
-            float dt = (float)((now - _lastMoveTicks) / (double)System.Diagnostics.Stopwatch.Frequency);
+            float dt = (float)((now - _lastMoveTicks) / (double)Stopwatch.Frequency);
             _lastMoveTicks = now;
             if (dt > 0.0001f)
             {

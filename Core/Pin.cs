@@ -2,8 +2,6 @@ using System.Numerics;
 
 namespace PrinceWM.Core;
 
-internal enum PinKind { Image, Note }
-
 internal sealed class Pin
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");

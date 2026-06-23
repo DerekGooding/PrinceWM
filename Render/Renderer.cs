@@ -1,5 +1,4 @@
 using System.Numerics;
-using PrinceWM.Core;
 using Vortice.Direct3D;
 using Vortice.DirectWrite;
 using Vortice.Mathematics;
@@ -187,8 +186,8 @@ internal sealed class Renderer : IDisposable
             StartCap = CapStyle.Round,
             EndCap = CapStyle.Round,
             DashCap = CapStyle.Round,
-            LineJoin = Vortice.Direct2D1.LineJoin.Round,
-            DashStyle = Vortice.Direct2D1.DashStyle.Solid,
+            LineJoin = LineJoin.Round,
+            DashStyle = DashStyle.Solid,
             MiterLimit = 10f,
             DashOffset = 0f,
         });
@@ -381,13 +380,13 @@ internal sealed class Renderer : IDisposable
                 }
                 finally { bmp.UnlockBits(bd); }
 
-                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
                 bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
-                try { System.Windows.Forms.Clipboard.SetImage(bmp); } catch { }
+                try { Clipboard.SetImage(bmp); } catch { }
             }
             finally { _d3dContext.Unmap(staging, 0); }
         }
-        catch (Exception ex) { Core.Log.Ex("Screenshot", ex); }
+        catch (Exception ex) { Log.Ex("Screenshot", ex); }
     }
 
     private bool _wpBlurBroken;
@@ -418,7 +417,7 @@ internal sealed class Renderer : IDisposable
                 _d2d.DrawImage(_blur);
                 _d2d.Transform = Matrix3x2.Identity;
             }
-            catch (Exception ex) { _wpBlurBroken = true; Core.Log.Ex("WallpaperBlur", ex); }
+            catch (Exception ex) { _wpBlurBroken = true; Log.Ex("WallpaperBlur", ex); }
         }
 
         if (_theme.TintStrength > 0)
@@ -587,8 +586,8 @@ internal sealed class Renderer : IDisposable
         if (_pinImages.TryGetValue(file, out var cached)) return cached;
         try
         {
-            string path = System.IO.Path.Combine(Core.PinStore.ImagesDir, file);
-            if (!System.IO.File.Exists(path)) return null;
+            string path = Path.Combine(PinStore.ImagesDir, file);
+            if (!File.Exists(path)) return null;
             using var bmp = new System.Drawing.Bitmap(path);
             var rect = new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height);
             var data = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadOnly,
@@ -603,7 +602,7 @@ internal sealed class Renderer : IDisposable
             }
             finally { bmp.UnlockBits(data); }
         }
-        catch (Exception ex) { Core.Log.Ex("GetPinImage", ex); return null; }
+        catch (Exception ex) { Log.Ex("GetPinImage", ex); return null; }
     }
 
     private void DrawPinsWorld(Camera cam, IReadOnlyList<Pin> pins, string? editingId, string? resizeId,
@@ -813,7 +812,7 @@ internal sealed class Renderer : IDisposable
         }
         catch (Exception ex)
         {
-            Core.Log.Ex("ToolbarBlur", ex);
+            Log.Ex("ToolbarBlur", ex);
             _blurBroken = true;
             return null;
         }

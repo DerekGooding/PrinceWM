@@ -1,5 +1,4 @@
 using System.Drawing.Imaging;
-using PrinceWM.Core;
 using PrinceWM.Native;
 using DcAlphaMode = Vortice.DCommon.AlphaMode;
 
@@ -26,7 +25,7 @@ internal sealed class IconCache : IDisposable
         IntPtr hicon = NativeMethods.GetWindowIconHandle(hwnd);
         if (hicon == IntPtr.Zero) return null;
 
-        using var icon = System.Drawing.Icon.FromHandle(hicon);
+        using var icon = Icon.FromHandle(hicon);
         using var bmp = icon.ToBitmap();
         var rect = new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height);
         var data = bmp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppPArgb);

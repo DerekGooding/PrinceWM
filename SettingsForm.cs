@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using PrinceWM.Core;
 using PrinceWM.Native;
 using PrinceWM.UI;
 

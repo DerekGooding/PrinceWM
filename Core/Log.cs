@@ -12,8 +12,8 @@ internal static class Log
         {
             lock (Gate)
             {
-                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
-                System.IO.File.AppendAllText(Path, $"{DateTime.Now:HH:mm:ss.fff}  {msg}{Environment.NewLine}");
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
+                File.AppendAllText(Path, $"{DateTime.Now:HH:mm:ss.fff}  {msg}{Environment.NewLine}");
             }
         }
         catch { }

@@ -1,6 +1,5 @@
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX.Direct3D11;
-using PrinceWM.Core;
 
 namespace PrinceWM.Capture;
 
@@ -59,7 +58,7 @@ internal sealed class CaptureManager : IDisposable
             catch (Exception ex)
             {
 
-                Core.Log.Ex($"WindowCapture ctor '{it.Title}'", ex);
+                Log.Ex($"WindowCapture ctor '{it.Title}'", ex);
             }
         }
 
@@ -121,7 +120,7 @@ internal sealed class CaptureManager : IDisposable
 
             int f = _failCounts.GetValueOrDefault(hwnd) + 1;
             _failCounts[hwnd] = f;
-            if (f >= 3) { Core.Log.Ex("Capture dropped (repeated failure)", ex); (drop ??= new()).Add(hwnd); }
+            if (f >= 3) { Log.Ex("Capture dropped (repeated failure)", ex); (drop ??= new()).Add(hwnd); }
             return;
         }
 
@@ -158,7 +157,7 @@ internal sealed class CaptureManager : IDisposable
         {
             _caps[hwnd] = new WindowCapture(hwnd, _d3d, _ctx, _d2d, _rtDevice);
         }
-        catch (Exception ex) { Core.Log.Ex("Rebuild capture", ex); }
+        catch (Exception ex) { Log.Ex("Rebuild capture", ex); }
     }
 
     public void SetWallpaper(IntPtr hwnd)
@@ -169,7 +168,7 @@ internal sealed class CaptureManager : IDisposable
         _wallpaperHwnd = hwnd;
         if (hwnd == IntPtr.Zero) return;
         try { _wallpaper = new WindowCapture(hwnd, _d3d, _ctx, _d2d, _rtDevice); }
-        catch (Exception ex) { Core.Log.Ex("Wallpaper capture", ex); }
+        catch (Exception ex) { Log.Ex("Wallpaper capture", ex); }
     }
 
     public void ClearWallpaper()
@@ -181,7 +180,7 @@ internal sealed class CaptureManager : IDisposable
 
     public void SetStaticWallpaper(string? path)
     {
-        if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) { ClearStaticWallpaper(); return; }
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) { ClearStaticWallpaper(); return; }
         if (path == _staticPath && _staticWallpaper != null) return;
         ClearStaticWallpaper();
         _staticPath = path;
@@ -195,9 +194,9 @@ internal sealed class CaptureManager : IDisposable
             using var src = new System.Drawing.Bitmap(path);
             using var opaque = new System.Drawing.Bitmap(src.Width, src.Height,
                 System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-            using (var g = System.Drawing.Graphics.FromImage(opaque))
+            using (var g = Graphics.FromImage(opaque))
             {
-                g.Clear(System.Drawing.Color.Black);
+                g.Clear(Color.Black);
                 g.DrawImage(src, 0, 0, src.Width, src.Height);
             }
 
@@ -207,14 +206,14 @@ internal sealed class CaptureManager : IDisposable
             try
             {
                 var props = new BitmapProperties1(new Vortice.DCommon.PixelFormat(
-                    Vortice.DXGI.Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied),
+                    Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied),
                     96f, 96f, BitmapOptions.None);
                 _staticWallpaper = _d2d.CreateBitmap(
                     new Vortice.Mathematics.SizeI(opaque.Width, opaque.Height), data.Scan0, (uint)data.Stride, props);
             }
             finally { opaque.UnlockBits(data); }
         }
-        catch (Exception ex) { Core.Log.Ex("Static wallpaper load", ex); }
+        catch (Exception ex) { Log.Ex("Static wallpaper load", ex); }
     }
 
     public void ClearStaticWallpaper()
@@ -261,7 +260,7 @@ internal sealed class CaptureManager : IDisposable
             cap.Pause();    // drop the capture border again
             var sb = new System.Text.StringBuilder(80);
             Native.NativeMethods.GetWindowText(hwnd, sb, sb.Capacity);
-            Core.Log.Write($"focus-snapshot saved: '{sb}'");
+            Log.Write($"focus-snapshot saved: '{sb}'");
             return true;
         }
         return false;
@@ -297,14 +296,14 @@ internal sealed class CaptureManager : IDisposable
             try
             {
                 var props = new BitmapProperties1(new Vortice.DCommon.PixelFormat(
-                    Vortice.DXGI.Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied),
+                    Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied),
                     96f, 96f, BitmapOptions.None);
                 return _d2d.CreateBitmap(new Vortice.Mathematics.SizeI(bmp.Width, bmp.Height),
                     data.Scan0, (uint)data.Stride, props);
             }
             finally { bmp.UnlockBits(data); }
         }
-        catch (Exception ex) { Core.Log.Ex("LoadD2D snapshot", ex); return null; }
+        catch (Exception ex) { Log.Ex("LoadD2D snapshot", ex); return null; }
     }
 
     public float GetContentFade(IntPtr hwnd) =>
@@ -354,12 +353,12 @@ internal sealed class CaptureManager : IDisposable
     /// <summary>Diagnostic dump of every capture's state - for tracking down blank tiles.</summary>
     public void LogState(string when)
     {
-        Core.Log.Write($"--- captures @ {when} (border-removable={WindowCapture.BorderRemovable}, win11={Native.NativeMethods.IsWindows11}) ---");
+        Log.Write($"--- captures @ {when} (border-removable={WindowCapture.BorderRemovable}, win11={Native.NativeMethods.IsWindows11}) ---");
         foreach (var (h, cap) in _caps)
         {
             var sb = new System.Text.StringBuilder(80);
             Native.NativeMethods.GetWindowText(h, sb, sb.Capacity);
-            Core.Log.Write(
+            Log.Write(
                 $"  '{sb}' content={cap.HasContent} frames={cap.DiagFramesSeen} pending={cap.DiagHasPending} " +
                 $"black={cap.DiagPendingBlack} empty={cap.DiagEmptyUpdates} pool={cap.DiagPool} closed={cap.IsClosed} " +
                 $"iconic={Native.NativeMethods.IsIconic(h)} cloaked={Native.NativeMethods.IsWindowCloaked(h)}");

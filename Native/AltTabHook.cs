@@ -3,17 +3,6 @@ using static PrinceWM.Native.NativeMethods;
 
 namespace PrinceWM.Native;
 
-internal enum NavKey
-{
-    None,
-    Escape,
-    Enter,
-    Left,
-    Up,
-    Right,
-    Down,
-}
-
 internal sealed class AltTabHook : IDisposable
 {
 
