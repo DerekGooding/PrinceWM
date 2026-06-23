@@ -14,7 +14,7 @@ internal sealed class Renderer : IDisposable
 {
     private readonly IntPtr _hwnd;
 
-    private ID3D11Device _d3dDevice = null!;
+    private ID3D11Device? _d3dDevice = null!;
     private ID3D11DeviceContext _d3dContext = null!;
     private IDXGISwapChain1 _swapChain = null!;
     private ID2D1Factory1 _d2dFactory = null!;
@@ -45,7 +45,7 @@ internal sealed class Renderer : IDisposable
     private ID2D1SolidColorBrush _dyn = null!;
     private IDWriteTextFormat _noteFormat = null!;
 
-    private readonly Dictionary<string, ID2D1Bitmap> _pinImages = new();
+    private readonly Dictionary<string, ID2D1Bitmap> _pinImages = [];
 
     public const int ToolButtonCount = 8;
     private const float BtnSize = 46f, BtnGap = 9f;
@@ -61,10 +61,10 @@ internal sealed class Renderer : IDisposable
 
     private float _safeTop, _safeBottom;
 
-    private readonly Dictionary<string, Vector2> _hoverSprings = new();
-    private float[] _lifts = Array.Empty<float>();
+    private readonly Dictionary<string, Vector2> _hoverSprings = [];
+    private float[] _lifts = [];
 
-    public ID3D11Device D3DDevice => _d3dDevice;
+    public ID3D11Device? D3DDevice => _d3dDevice;
     public ID3D11DeviceContext D3DContext => _d3dContext;
     public ID2D1DeviceContext D2D => _d2d;
 
@@ -75,7 +75,7 @@ internal sealed class Renderer : IDisposable
     }
 
     public RectangleF ArrowRect =>
-    new(_width - 52f, (_safeTop + (_height - _safeBottom)) * 0.5f - 32f, 34f, 64f);
+    new(_width - 52f, ((_safeTop + (_height - _safeBottom)) * 0.5f) - 32f, 34f, 64f);
 
     public Renderer(IntPtr hwnd, int width, int height, Theme theme)
     {
@@ -88,15 +88,15 @@ internal sealed class Renderer : IDisposable
 
     private void CreateDeviceResources()
     {
-        FeatureLevel[] levels = { FeatureLevel.Level_11_1, FeatureLevel.Level_11_0 };
+        FeatureLevel[] levels = [FeatureLevel.Level_11_1, FeatureLevel.Level_11_0];
 
         D3D11.D3D11CreateDevice(
-            (IDXGIAdapter?)null,
+            null,
             DriverType.Hardware,
             DeviceCreationFlags.BgraSupport,
             levels,
-            out _d3dDevice!).CheckError();
-        _d3dContext = _d3dDevice.ImmediateContext;
+            out _d3dDevice).CheckError();
+        _d3dContext = _d3dDevice!.ImmediateContext;
 
         using var dxgiDevice = _d3dDevice.QueryInterface<IDXGIDevice>();
 
@@ -241,12 +241,12 @@ internal sealed class Renderer : IDisposable
 
     public RectangleF LiftedTileScreenRect(Camera cam, IReadOnlyList<WindowItem> items, int i)
     {
-        WindowItem it = items[i];
-        float lift = i < _lifts.Length ? _lifts[i] : 1f;
-        float gx = it.WorldSize.X * (lift - 1f) * 0.5f;
-        float gy = it.WorldSize.Y * (lift - 1f) * 0.5f;
-        Vector2 tl = cam.WorldToScreen(it.WorldPos - new Vector2(gx, gy));
-        Vector2 br = cam.WorldToScreen(it.WorldPos + it.WorldSize + new Vector2(gx, gy));
+        var it = items[i];
+        var lift = i < _lifts.Length ? _lifts[i] : 1f;
+        var gx = it.WorldSize.X * (lift - 1f) * 0.5f;
+        var gy = it.WorldSize.Y * (lift - 1f) * 0.5f;
+        var tl = cam.WorldToScreen(it.WorldPos - new Vector2(gx, gy));
+        var br = cam.WorldToScreen(it.WorldPos + it.WorldSize + new Vector2(gx, gy));
         return new RectangleF(tl.X, tl.Y, br.X - tl.X, br.Y - tl.Y);
     }
 
@@ -275,31 +275,31 @@ internal sealed class Renderer : IDisposable
             DrawWallpaper(wallpaper);
 
         if (_theme.ShowDots)
-            DrawDotGrid(camera, (1f - commitFade * 0.9f) * globalOpacity);
+            DrawDotGrid(camera, (1f - (commitFade * 0.9f)) * globalOpacity);
 
         _d2d.Transform = camera.WorldMatrix;
-        float otherOpacity = (1f - commitFade) * globalOpacity;
+        var otherOpacity = (1f - commitFade) * globalOpacity;
 
         if (draw?.Strokes != null && (draw.Strokes.Count > 0 || draw.InProgress != null))
             DrawStrokesWorld(draw.Strokes, draw.InProgress, camera.Zoom, otherOpacity);
 
         Dictionary<string, int>? wsTint = null;
-        if (workspaces != null && workspaces.Count > 0)
+        if (workspaces?.Count > 0)
         {
             wsTint = new(StringComparer.Ordinal);
             foreach (var ws in workspaces)
                 foreach (var m in ws.Members) wsTint[m] = ws.Tint;
             DrawWorkspaceLinks(workspaces, items, ghosts, otherOpacity, camera.Zoom);
         }
-        if (ghosts != null && ghosts.Count > 0)
+        if (ghosts?.Count > 0)
             DrawGhosts(ghosts, camera.Zoom, otherOpacity);
 
-        int highlightIndex = hoverIndex >= 0 ? hoverIndex : selectedIndex;
-        for (int i = 0; i < items.Count; i++)
+        var highlightIndex = hoverIndex >= 0 ? hoverIndex : selectedIndex;
+        for (var i = 0; i < items.Count; i++)
         {
             if (i != selectedIndex)
             {
-                int tintRgb = -1; float tintA = 0f;
+                var tintRgb = -1; var tintA = 0f;
                 if (wsTint != null && wsTint.TryGetValue(items[i].AppKey, out var tc)) { tintRgb = tc; tintA = 0.16f * tintFade; }
                 DrawTile(items[i], i == highlightIndex, camera.Zoom, bitmapProvider(items[i].Hwnd), otherOpacity, Fade(items[i].Hwnd), _lifts[i], 1f, 1f, tintRgb, tintA);
             }
@@ -307,12 +307,12 @@ internal sealed class Renderer : IDisposable
 
         if (selectedIndex >= 0 && selectedIndex < items.Count)
         {
-            float ct = Math.Clamp(commitFade / 0.55f, 0f, 1f);
-            float highlightFade = 1f - (ct * ct * (3f - 2f * ct));
-            float cc = Math.Clamp(commitFade / 0.9f, 0f, 1f);
-            float cornerScale = 1f - (cc * cc * (3f - 2f * cc));
-            float selLift = _lifts[selectedIndex] + (1f - _lifts[selectedIndex]) * commitFade;
-            int stint = -1; float stintA = 0f;
+            var ct = Math.Clamp(commitFade / 0.55f, 0f, 1f);
+            var highlightFade = 1f - (ct * ct * (3f - (2f * ct)));
+            var cc = Math.Clamp(commitFade / 0.9f, 0f, 1f);
+            var cornerScale = 1f - (cc * cc * (3f - (2f * cc)));
+            var selLift = _lifts[selectedIndex] + ((1f - _lifts[selectedIndex]) * commitFade);
+            var stint = -1; var stintA = 0f;
             if (wsTint != null && wsTint.TryGetValue(items[selectedIndex].AppKey, out var sc)) { stint = sc; stintA = 0.16f * tintFade * (1f - commitFade); }
             DrawTile(items[selectedIndex], selectedIndex == highlightIndex, camera.Zoom, bitmapProvider(items[selectedIndex].Hwnd), globalOpacity, Fade(items[selectedIndex].Hwnd), selLift, highlightFade, cornerScale, stint, stintA);
         }
@@ -326,14 +326,14 @@ internal sealed class Renderer : IDisposable
             _d2d.DrawLine(connectFrom.Value, connectTo.Value, _dyn, 3f / MathF.Max(camera.Zoom, 0.01f), _roundStroke);
         }
 
-        if (pins != null && pins.Count > 0)
+        if (pins?.Count > 0)
             DrawPinsWorld(camera, pins, editingPinId, resizePinId, CaretOn(), otherOpacity);
 
         _d2d.Transform = Matrix3x2.Identity;
-        if (workspaces != null && workspaces.Count > 0)
+        if (workspaces?.Count > 0)
             DrawWorkspaceLabels(camera, workspaces, items, ghosts, (1f - commitFade) * globalOpacity);
         DrawTileChrome(camera, items, hoverIndex, hoverClose, (1f - commitFade) * globalOpacity);
-        if (pins != null && pins.Count > 0)
+        if (pins?.Count > 0)
             DrawPinChrome(camera, pins, hoverPinIndex, hoverPinClose, (1f - commitFade) * globalOpacity);
         DrawOverlayText(items, selectedIndex, (1f - commitFade) * globalOpacity);
         DrawArrow((1f - commitFade) * globalOpacity);
@@ -358,7 +358,7 @@ internal sealed class Renderer : IDisposable
             d.CPUAccessFlags = CpuAccessFlags.Read;
             d.Usage = ResourceUsage.Staging;
             d.MiscFlags = ResourceOptionFlags.None;
-            using var staging = _d3dDevice.CreateTexture2D(d);
+            using var staging = _d3dDevice!.CreateTexture2D(d);
             _d3dContext.CopyResource(staging, backbuf);
 
             var map = _d3dContext.Map(staging, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
@@ -373,11 +373,11 @@ internal sealed class Renderer : IDisposable
                 try
                 {
                     var row = new byte[w * 4];
-                    for (int y = 0; y < h; y++)
+                    for (var y = 0; y < h; y++)
                     {
-                        IntPtr src = map.DataPointer + y * (int)map.RowPitch;
+                        var src = map.DataPointer + (y * (int)map.RowPitch);
                         System.Runtime.InteropServices.Marshal.Copy(src, row, 0, w * 4);
-                        System.Runtime.InteropServices.Marshal.Copy(row, 0, bd.Scan0 + y * bd.Stride, w * 4);
+                        System.Runtime.InteropServices.Marshal.Copy(row, 0, bd.Scan0 + (y * bd.Stride), w * 4);
                     }
                 }
                 finally { bmp.UnlockBits(bd); }
@@ -398,9 +398,9 @@ internal sealed class Renderer : IDisposable
         var size = wallpaper.Size;
         if (size.Width < 1 || size.Height < 1) return;
 
-        float scale = MathF.Max(_width / size.Width, _height / size.Height);
-        float ox = (_width - size.Width * scale) * 0.5f;
-        float oy = (_height - size.Height * scale) * 0.5f;
+        var scale = MathF.Max(_width / size.Width, _height / size.Height);
+        var ox = (_width - (size.Width * scale)) * 0.5f;
+        var oy = (_height - (size.Height * scale)) * 0.5f;
         var dest = new Rect(ox, oy, size.Width * scale, size.Height * scale);
 
         // Sharp base so the wallpaper always shows, then the blurred version on top when enabled
@@ -434,22 +434,22 @@ internal sealed class Renderer : IDisposable
     {
         if (opacity <= 0.01f) return;
 
-        for (int i = 0; i < items.Count; i++)
+        for (var i = 0; i < items.Count; i++)
         {
-            WindowItem it = items[i];
-            float lift = i < _lifts.Length ? _lifts[i] : 1f;
-            float gx = it.WorldSize.X * (lift - 1f) * 0.5f;
-            float gy = it.WorldSize.Y * (lift - 1f) * 0.5f;
-            Vector2 tl = cam.WorldToScreen(it.WorldPos - new Vector2(gx, gy));
-            Vector2 br = cam.WorldToScreen(it.WorldPos + it.WorldSize + new Vector2(gx, gy));
+            var it = items[i];
+            var lift = i < _lifts.Length ? _lifts[i] : 1f;
+            var gx = it.WorldSize.X * (lift - 1f) * 0.5f;
+            var gy = it.WorldSize.Y * (lift - 1f) * 0.5f;
+            var tl = cam.WorldToScreen(it.WorldPos - new Vector2(gx, gy));
+            var br = cam.WorldToScreen(it.WorldPos + it.WorldSize + new Vector2(gx, gy));
             float sw = br.X - tl.X, sh = br.Y - tl.Y;
 
             if (sw < 110f || sh < 72f) continue;
 
-            ID2D1Bitmap? icon = IconProvider?.Invoke(it);
+            var icon = IconProvider?.Invoke(it);
             if (icon != null)
             {
-                float isz = 24f;
+                const float isz = 24f;
                 var irect = new Rect(tl.X + 9f, tl.Y + 9f, isz, isz);
                 var isize = icon.Size;
                 ((ID2D1RenderTarget)_d2d).DrawBitmap(icon, irect, opacity,
@@ -457,12 +457,12 @@ internal sealed class Renderer : IDisposable
 
                 if (it.StackCount > 1)
                 {
-                    string n = it.StackCount.ToString();
-                    float bsz = 17f;
+                    var n = it.StackCount.ToString();
+                    const float bsz = 17f;
                     var bc = new Vector2(irect.X + isz - 3f, irect.Y + isz - 3f);
-                    var brect = new Rect(bc.X - bsz * 0.5f, bc.Y - bsz * 0.5f, bsz, bsz);
+                    var brect = new Rect(bc.X - (bsz * 0.5f), bc.Y - (bsz * 0.5f), bsz, bsz);
                     _borderSel.Opacity = opacity;
-                    _d2d.FillEllipse(new Ellipse(bc, bsz * 0.5f + 1f, bsz * 0.5f + 1f), _badgeBg);
+                    _d2d.FillEllipse(new Ellipse(bc, (bsz * 0.5f) + 1f, (bsz * 0.5f) + 1f), _badgeBg);
                     _d2d.FillEllipse(new Ellipse(bc, bsz * 0.5f, bsz * 0.5f), _borderSel);
                     _text.Opacity = opacity;
                     _d2d.DrawText(n, _badgeFormat, brect, _text, DrawTextOptions.None);
@@ -471,8 +471,8 @@ internal sealed class Renderer : IDisposable
             }
             else if (it.StackCount > 1)
             {
-                string n = it.StackCount.ToString();
-                float bw = MathF.Max(24f, 14f + n.Length * 9f), bh = 24f;
+                var n = it.StackCount.ToString();
+                float bw = MathF.Max(24f, 14f + (n.Length * 9f)), bh = 24f;
                 var brect = new Rect(tl.X + 8f, tl.Y + 8f, bw, bh);
                 var rr = new RoundedRectangle { Rect = brect, RadiusX = bh * 0.5f, RadiusY = bh * 0.5f };
                 _badgeBg.Opacity = opacity; _d2d.FillRoundedRectangle(rr, _badgeBg);
@@ -487,7 +487,7 @@ internal sealed class Renderer : IDisposable
                 var box = new RoundedRectangle { Rect = new Rect(cr.X, cr.Y, cr.Width, cr.Height), RadiusX = 4f, RadiusY = 4f };
                 if (hoverClose) { _red.Opacity = opacity; _d2d.FillRoundedRectangle(box, _red); _red.Opacity = 1f; }
                 else { _badgeBg.Opacity = opacity * 0.6f; _d2d.FillRoundedRectangle(box, _badgeBg); _badgeBg.Opacity = 1f; }
-                float cx = cr.X + cr.Width * 0.5f, cy = cr.Y + cr.Height * 0.5f, d = 4f;
+                float cx = cr.X + (cr.Width * 0.5f), cy = cr.Y + (cr.Height * 0.5f), d = 4f;
                 _text.Opacity = opacity;
                 _d2d.DrawLine(new Vector2(cx - d, cy - d), new Vector2(cx + d, cy + d), _text, 1.7f, _roundStroke);
                 _d2d.DrawLine(new Vector2(cx - d, cy + d), new Vector2(cx + d, cy - d), _text, 1.7f, _roundStroke);
@@ -500,8 +500,8 @@ internal sealed class Renderer : IDisposable
     {
         if (opacity <= 0.01f) return;
         var r = ArrowRect;
-        float cx = r.X + r.Width * 0.5f;
-        float cy = r.Y + r.Height * 0.5f;
+        var cx = r.X + (r.Width * 0.5f);
+        var cy = r.Y + (r.Height * 0.5f);
 
         var p1 = new Vector2(cx + 3f, cy - 6f);
         var p2 = new Vector2(cx - 3f, cy);
@@ -528,18 +528,18 @@ internal sealed class Renderer : IDisposable
         while (spacing * camera.Zoom < 26f) spacing *= 2f;
         while (spacing * camera.Zoom > 90f) spacing *= 0.5f;
 
-        Vector2 topLeft = camera.ScreenToWorld(Vector2.Zero);
-        Vector2 bottomRight = camera.ScreenToWorld(new Vector2(_width, _height));
+        var topLeft = camera.ScreenToWorld(Vector2.Zero);
+        var bottomRight = camera.ScreenToWorld(new Vector2(_width, _height));
 
-        float startX = MathF.Floor(topLeft.X / spacing) * spacing;
-        float startY = MathF.Floor(topLeft.Y / spacing) * spacing;
-        float radius = Math.Clamp(_theme.DotSize, 6, 50) / 10f;
+        var startX = MathF.Floor(topLeft.X / spacing) * spacing;
+        var startY = MathF.Floor(topLeft.Y / spacing) * spacing;
+        var radius = Math.Clamp(_theme.DotSize, 6, 50) / 10f;
 
-        for (float wx = startX; wx <= bottomRight.X; wx += spacing)
+        for (var wx = startX; wx <= bottomRight.X; wx += spacing)
         {
-            for (float wy = startY; wy <= bottomRight.Y; wy += spacing)
+            for (var wy = startY; wy <= bottomRight.Y; wy += spacing)
             {
-                Vector2 s = camera.WorldToScreen(new Vector2(wx, wy));
+                var s = camera.WorldToScreen(new Vector2(wx, wy));
                 _d2d.FillEllipse(new Ellipse(new Vector2(s.X, s.Y), radius, radius), _dot);
             }
         }
@@ -551,20 +551,20 @@ internal sealed class Renderer : IDisposable
     {
         if (_lifts.Length != items.Count) _lifts = new float[items.Count];
         dt = Math.Clamp(dt, 0f, 0.05f);
-        float hoverScale = 1f + _theme.HoverLift / 1000f;
+        var hoverScale = 1f + (_theme.HoverLift / 1000f);
         const float stiffness = 320f, damping = 17f;
 
         var live = new HashSet<string>();
-        for (int i = 0; i < items.Count; i++)
+        for (var i = 0; i < items.Count; i++)
         {
-            string key = items[i].AppKey;
+            var key = items[i].AppKey;
             live.Add(key);
-            float target = (i == hoverIndex && commitFade <= 0f) ? 1f : 0f;
-            _hoverSprings.TryGetValue(key, out Vector2 s);
-            s.Y += (((target - s.X) * stiffness) - s.Y * damping) * dt;
+            var target = (i == hoverIndex && commitFade <= 0f) ? 1f : 0f;
+            _hoverSprings.TryGetValue(key, out var s);
+            s.Y += (((target - s.X) * stiffness) - (s.Y * damping)) * dt;
             s.X += s.Y * dt;
             _hoverSprings[key] = s;
-            _lifts[i] = 1f + (hoverScale - 1f) * s.X;
+            _lifts[i] = 1f + ((hoverScale - 1f) * s.X);
         }
 
         if (_hoverSprings.Count > items.Count + 16)
@@ -592,7 +592,7 @@ internal sealed class Renderer : IDisposable
         if (_pinImages.TryGetValue(file, out var cached)) return cached;
         try
         {
-            string path = Path.Combine(PinStore.ImagesDir, file);
+            var path = Path.Combine(PinStore.ImagesDir, file);
             if (!File.Exists(path)) return null;
             using var bmp = new Bitmap(path);
             var rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
@@ -615,19 +615,19 @@ internal sealed class Renderer : IDisposable
     bool caretOn, float opacity)
     {
         if (opacity <= 0.003f) return;
-        float z = MathF.Max(cam.Zoom, 0.001f);
+        var z = MathF.Max(cam.Zoom, 0.001f);
 
         foreach (var pin in pins)
         {
             var rect = new Rect(pin.X, pin.Y, pin.W, pin.H);
-            float rad = pin.Kind == PinKind.Note ? 12f : 8f;
+            var rad = pin.Kind == PinKind.Note ? 12f : 8f;
 
             if (_theme.WindowShadows)
             {
-                float sh = 14f;
+                const float sh = 14f;
                 var sr = new RoundedRectangle
                 {
-                    Rect = new Rect(rect.X - sh * 0.3f, rect.Y + sh * 0.4f, rect.Width + sh * 0.6f, rect.Height + sh * 0.6f),
+                    Rect = new Rect(rect.X - (sh * 0.3f), rect.Y + (sh * 0.4f), rect.Width + (sh * 0.6f), rect.Height + (sh * 0.6f)),
                     RadiusX = rad + 6f,
                     RadiusY = rad + 6f,
                 };
@@ -666,12 +666,12 @@ internal sealed class Renderer : IDisposable
                 _noteBg.Opacity = opacity; _d2d.FillRoundedRectangle(rr, _noteBg); _noteBg.Opacity = 1f;
                 _noteEdge.Opacity = opacity; _d2d.DrawRoundedRectangle(rr, _noteEdge, 1.2f / z); _noteEdge.Opacity = 1f;
 
-                float pad = 12f;
-                var textRect = new Rect(rect.X + pad, rect.Y + pad, rect.Width - 2f * pad, rect.Height - 2f * pad);
-                bool editing = pin.Id == editingId;
+                const float pad = 12f;
+                var textRect = new Rect(rect.X + pad, rect.Y + pad, rect.Width - (2f * pad), rect.Height - (2f * pad));
+                var editing = pin.Id == editingId;
                 if (pin.Text.Length > 0 || editing)
                 {
-                    string shown = editing && caretOn ? pin.Text + "|" : pin.Text;
+                    var shown = editing && caretOn ? pin.Text + "|" : pin.Text;
                     _text.Opacity = opacity;
                     _d2d.DrawText(shown, _noteFormat, textRect, _text, DrawTextOptions.Clip);
                     _text.Opacity = 1f;
@@ -686,9 +686,9 @@ internal sealed class Renderer : IDisposable
 
             if (pin.Locked)
             {
-                float dr = 4f / z;
+                var dr = 4f / z;
                 _borderSel.Opacity = opacity;
-                _d2d.FillEllipse(new Ellipse(new Vector2(rect.X + 10f / z, rect.Y + 10f / z), dr, dr), _borderSel);
+                _d2d.FillEllipse(new Ellipse(new Vector2(rect.X + (10f / z), rect.Y + (10f / z)), dr, dr), _borderSel);
                 _borderSel.Opacity = 1f;
             }
 
@@ -696,7 +696,7 @@ internal sealed class Renderer : IDisposable
             {
                 _borderSel.Opacity = opacity;
                 _d2d.DrawRoundedRectangle(rr, _borderSel, 2f / z);
-                float hs = 14f / z;
+                var hs = 14f / z;
                 var handle = new Rect(rect.X + rect.Width - hs, rect.Y + rect.Height - hs, hs, hs);
                 _d2d.FillRectangle(handle, _borderSel);
                 _borderSel.Opacity = 1f;
@@ -710,14 +710,14 @@ internal sealed class Renderer : IDisposable
 
     public RectangleF ToolButtonRect(int i)
     {
-        float totalW = ToolButtonCount * BtnSize + (ToolButtonCount - 1) * BtnGap;
-        float x0 = (_width - totalW) * 0.5f;
-        return new RectangleF(x0 + i * (BtnSize + BtnGap), ToolbarY, BtnSize, BtnSize);
+        const float totalW = (ToolButtonCount * BtnSize) + ((ToolButtonCount - 1) * BtnGap);
+        var x0 = (_width - totalW) * 0.5f;
+        return new RectangleF(x0 + (i * (BtnSize + BtnGap)), ToolbarY, BtnSize, BtnSize);
     }
 
     private static Vector2 SpringTo(Vector2 s, float target, float dt)
     {
-        float a = (target - s.X) * 320f - s.Y * 26f;
+        var a = ((target - s.X) * 320f) - (s.Y * 26f);
         s.Y += a * dt;
         s.X += s.Y * dt;
         return s;
@@ -726,7 +726,7 @@ internal sealed class Renderer : IDisposable
     private void StepButtonSprings(DrawState d, float dt)
     {
         dt = MathF.Min(dt, 0.05f);
-        for (int i = 0; i < ToolButtonCount; i++)
+        for (var i = 0; i < ToolButtonCount; i++)
             _btnSpring[i] = SpringTo(_btnSpring[i], d.Active && d.HoverButton == i ? 1f : 0f, dt);
         _btnSpring[ToolButtonCount] = SpringTo(_btnSpring[ToolButtonCount], d.HoverToggle ? 1f : 0f, dt);
     }
@@ -734,7 +734,7 @@ internal sealed class Renderer : IDisposable
     private void DrawStrokesWorld(IReadOnlyList<Stroke> strokes, Stroke? inProgress, float zoom, float opacity)
     {
         if (opacity <= 0.003f) return;
-        float z = MathF.Max(zoom, 0.001f);
+        var z = MathF.Max(zoom, 0.001f);
         foreach (var s in strokes) DrawOneStroke(s, z, opacity);
         if (inProgress != null) DrawOneStroke(inProgress, z, opacity);
     }
@@ -743,12 +743,12 @@ internal sealed class Renderer : IDisposable
     {
         if (s.Count == 0) return;
         SetDyn(s.Color, opacity);
-        float w = MathF.Max(0.5f, s.Thickness);
+        var w = MathF.Max(0.5f, s.Thickness);
 
         switch (s.Kind)
         {
             case StrokeKind.Free:
-                for (int i = 1; i < s.Count; i++)
+                for (var i = 1; i < s.Count; i++)
                     _d2d.DrawLine(s.At(i - 1), s.At(i), _dyn, w, _roundStroke);
                 if (s.Count == 1) _d2d.FillEllipse(new Ellipse(s.At(0), w * 0.5f, w * 0.5f), _dyn);
                 break;
@@ -768,7 +768,7 @@ internal sealed class Renderer : IDisposable
             case StrokeKind.Ellipse:
                 {
                     var (x, y, bw, bh) = s.Bounds();
-                    var el = new Ellipse(new Vector2(x + bw * 0.5f, y + bh * 0.5f), bw * 0.5f, bh * 0.5f);
+                    var el = new Ellipse(new Vector2(x + (bw * 0.5f), y + (bh * 0.5f)), bw * 0.5f, bh * 0.5f);
                     if (s.Fill >= 0) { SetDyn(s.Fill, opacity); _d2d.FillEllipse(el, _dyn); SetDyn(s.Color, opacity); }
                     _d2d.DrawEllipse(el, _dyn, w);
                     break;
@@ -782,16 +782,16 @@ internal sealed class Renderer : IDisposable
     {
         if (opacity <= 0.01f || !_theme.ShowPaintButton) return;
 
-        ID2D1Image? blurred = TryGrabBlur();
+        var blurred = TryGrabBlur();
 
         DrawButton(DrawToggleRect, _btnSpring[ToolButtonCount].X, d.Active, opacity, blurred,
             (cx, cy, r) => DrawToolIcon(-1, cx, cy, r, d));
 
         if (!d.Active) return;
 
-        for (int i = 0; i < ToolButtonCount; i++)
+        for (var i = 0; i < ToolButtonCount; i++)
         {
-            bool selected = i < 6 && (int)d.Tool == i;
+            var selected = i < 6 && (int)d.Tool == i;
             DrawButton(ToolButtonRect(i), _btnSpring[i].X, selected, opacity, blurred,
                 (cx, cy, r) => DrawToolIcon(i, cx, cy, r, d));
         }
@@ -828,8 +828,8 @@ internal sealed class Renderer : IDisposable
     private void DrawButton(RectangleF rect, float lift, bool selected, float opacity,
         ID2D1Image? blurred, Action<float, float, float> icon)
     {
-        float grow = 4f * lift;
-        var r = new Rect(rect.X - grow, rect.Y - grow, rect.Width + 2f * grow, rect.Height + 2f * grow);
+        var grow = 4f * lift;
+        var r = new Rect(rect.X - grow, rect.Y - grow, rect.Width + (2f * grow), rect.Height + (2f * grow));
         var rr = new RoundedRectangle { Rect = r, RadiusX = 12f, RadiusY = 12f };
 
         if (blurred != null)
@@ -855,14 +855,14 @@ internal sealed class Renderer : IDisposable
         {
             _borderSel.Opacity = opacity; _d2d.DrawRoundedRectangle(rr, _borderSel, 2.2f); _borderSel.Opacity = 1f;
         }
-        icon((float)(r.X + r.Width * 0.5f), (float)(r.Y + r.Height * 0.5f), (float)(r.Width * 0.5f));
+        icon((float)(r.X + (r.Width * 0.5f)), (float)(r.Y + (r.Height * 0.5f)), (float)(r.Width * 0.5f));
     }
 
     private void DrawToolIcon(int i, float cx, float cy, float r, DrawState d)
     {
-        float u = r * 0.54f;
-        float lw = MathF.Max(2.3f, r * 0.16f);
-        int ink = 0xF2F6FB;
+        var u = r * 0.54f;
+        var lw = MathF.Max(2.3f, r * 0.16f);
+        const int ink = 0xF2F6FB;
         _dyn.Color = Theme.ToColor4(ink, 1f);
 
         switch (i)
@@ -871,9 +871,9 @@ internal sealed class Renderer : IDisposable
             case 0:
                 {
                     var tip = new Vector2(cx - u, cy + u);
-                    var nape = new Vector2(cx + u * 0.45f, cy - u * 0.45f);
+                    var nape = new Vector2(cx + (u * 0.45f), cy - (u * 0.45f));
                     var cap = new Vector2(cx + u, cy - u);
-                    _d2d.DrawLine(new Vector2(tip.X + lw * 0.6f, tip.Y - lw * 0.6f), nape, _dyn, lw * 1.25f, _roundStroke);
+                    _d2d.DrawLine(new Vector2(tip.X + (lw * 0.6f), tip.Y - (lw * 0.6f)), nape, _dyn, lw * 1.25f, _roundStroke);
                     _dyn.Color = Theme.ToColor4(0xFF6B6B, 1f);
                     _d2d.DrawLine(nape, cap, _dyn, lw * 1.25f, _roundStroke);
                     _dyn.Color = Theme.ToColor4(0xFFC857, 1f);
@@ -890,7 +890,7 @@ internal sealed class Renderer : IDisposable
                     break;
                 }
             case 2:
-                _d2d.DrawRoundedRectangle(new RoundedRectangle { Rect = new Rect(cx - u, cy - u * 0.76f, u * 2f, u * 1.52f), RadiusX = 4f, RadiusY = 4f }, _dyn, lw);
+                _d2d.DrawRoundedRectangle(new RoundedRectangle { Rect = new Rect(cx - u, cy - (u * 0.76f), u * 2f, u * 1.52f), RadiusX = 4f, RadiusY = 4f }, _dyn, lw);
                 break;
 
             case 3:
@@ -899,46 +899,46 @@ internal sealed class Renderer : IDisposable
 
             case 4:
                 {
-                    var p1 = new Vector2(cx - u * 0.95f, cy - u * 0.35f);
-                    var p2 = new Vector2(cx + u * 0.95f, cy - u * 0.6f);
-                    var p3 = new Vector2(cx + u * 0.6f, cy + u);
-                    var p4 = new Vector2(cx - u * 0.55f, cy + u * 0.85f);
+                    var p1 = new Vector2(cx - (u * 0.95f), cy - (u * 0.35f));
+                    var p2 = new Vector2(cx + (u * 0.95f), cy - (u * 0.6f));
+                    var p3 = new Vector2(cx + (u * 0.6f), cy + u);
+                    var p4 = new Vector2(cx - (u * 0.55f), cy + (u * 0.85f));
                     _d2d.DrawLine(p1, p2, _dyn, lw, _roundStroke);
                     _d2d.DrawLine(p2, p3, _dyn, lw, _roundStroke);
                     _d2d.DrawLine(p3, p4, _dyn, lw, _roundStroke);
                     _d2d.DrawLine(p4, p1, _dyn, lw, _roundStroke);
 
-                    _d2d.DrawLine(new Vector2(cx - u * 0.3f, cy - u * 0.5f), new Vector2(cx, cy - u * 1.1f), _dyn, lw * 0.8f, _roundStroke);
-                    _d2d.DrawLine(new Vector2(cx, cy - u * 1.1f), new Vector2(cx + u * 0.4f, cy - u * 0.55f), _dyn, lw * 0.8f, _roundStroke);
+                    _d2d.DrawLine(new Vector2(cx - (u * 0.3f), cy - (u * 0.5f)), new Vector2(cx, cy - (u * 1.1f)), _dyn, lw * 0.8f, _roundStroke);
+                    _d2d.DrawLine(new Vector2(cx, cy - (u * 1.1f)), new Vector2(cx + (u * 0.4f), cy - (u * 0.55f)), _dyn, lw * 0.8f, _roundStroke);
 
                     SetDyn(d.Color, 1f);
-                    _d2d.FillEllipse(new Ellipse(new Vector2(cx + u * 0.95f, cy + u * 0.35f), lw, lw * 1.35f), _dyn);
+                    _d2d.FillEllipse(new Ellipse(new Vector2(cx + (u * 0.95f), cy + (u * 0.35f)), lw, lw * 1.35f), _dyn);
                     break;
                 }
             case 5:
                 {
                     var topF = new[]
                     {
-                    new Vector2(cx - u * 0.7f, cy - u * 0.1f),
-                    new Vector2(cx + u * 0.4f, cy - u * 0.7f),
-                    new Vector2(cx + u, cy - u * 0.25f),
-                    new Vector2(cx - u * 0.1f, cy + u * 0.35f),
+                    new Vector2(cx - (u * 0.7f), cy - (u * 0.1f)),
+                    new Vector2(cx + (u * 0.4f), cy - (u * 0.7f)),
+                    new Vector2(cx + u, cy - (u * 0.25f)),
+                    new Vector2(cx - (u * 0.1f), cy + (u * 0.35f)),
                 };
                     FillQuad(topF, Theme.ToColor4(ink, 1f));
                     var body = new[]
                     {
-                    new Vector2(cx - u * 0.7f, cy - u * 0.1f),
-                    new Vector2(cx - u * 0.1f, cy + u * 0.35f),
-                    new Vector2(cx - u * 0.1f, cy + u),
-                    new Vector2(cx - u * 0.7f, cy + u * 0.55f),
+                    new Vector2(cx - (u * 0.7f), cy - (u * 0.1f)),
+                    new Vector2(cx - (u * 0.1f), cy + (u * 0.35f)),
+                    new Vector2(cx - (u * 0.1f), cy + u),
+                    new Vector2(cx - (u * 0.7f), cy + (u * 0.55f)),
                 };
                     FillQuad(body, Theme.ToColor4(0xFF8FA3, 1f));
                     var body2 = new[]
                     {
-                    new Vector2(cx - u * 0.1f, cy + u * 0.35f),
-                    new Vector2(cx + u, cy - u * 0.25f),
-                    new Vector2(cx + u, cy + u * 0.4f),
-                    new Vector2(cx - u * 0.1f, cy + u),
+                    new Vector2(cx - (u * 0.1f), cy + (u * 0.35f)),
+                    new Vector2(cx + u, cy - (u * 0.25f)),
+                    new Vector2(cx + u, cy + (u * 0.4f)),
+                    new Vector2(cx - (u * 0.1f), cy + u),
                 };
                     FillQuad(body2, Theme.ToColor4(0xE0708A, 1f));
                     break;
@@ -955,9 +955,9 @@ internal sealed class Renderer : IDisposable
             case 7:
                 {
                     _dyn.Color = Theme.ToColor4(ink, 1f);
-                    _d2d.FillEllipse(new Ellipse(new Vector2(cx - u * 0.6f, cy + u * 0.2f), u * 0.18f, u * 0.18f), _dyn);
+                    _d2d.FillEllipse(new Ellipse(new Vector2(cx - (u * 0.6f), cy + (u * 0.2f)), u * 0.18f, u * 0.18f), _dyn);
                     _d2d.FillEllipse(new Ellipse(new Vector2(cx, cy), u * 0.32f, u * 0.32f), _dyn);
-                    _d2d.FillEllipse(new Ellipse(new Vector2(cx + u * 0.62f, cy - u * 0.25f), u * 0.5f, u * 0.5f), _dyn);
+                    _d2d.FillEllipse(new Ellipse(new Vector2(cx + (u * 0.62f), cy - (u * 0.25f)), u * 0.5f, u * 0.5f), _dyn);
                     break;
                 }
         }
@@ -968,7 +968,7 @@ internal sealed class Renderer : IDisposable
         using var geo = _d2dFactory.CreatePathGeometry();
         using var sink = geo.Open();
         sink.BeginFigure(q[0], FigureBegin.Filled);
-        sink.AddLines(new[] { q[1], q[2], q[3] });
+        sink.AddLines([q[1], q[2], q[3]]);
         sink.EndFigure(FigureEnd.Closed);
         sink.Close();
         _dyn.Color = color;
@@ -979,8 +979,8 @@ internal sealed class Renderer : IDisposable
     {
         if (opacity <= 0.01f || hoverIndex < 0 || hoverIndex >= pins.Count) return;
         var pin = pins[hoverIndex];
-        Vector2 tl = cam.WorldToScreen(pin.Pos);
-        Vector2 br = cam.WorldToScreen(pin.Pos + pin.SizeV);
+        var tl = cam.WorldToScreen(pin.Pos);
+        var br = cam.WorldToScreen(pin.Pos + pin.SizeV);
         float sw = br.X - tl.X, sh = br.Y - tl.Y;
         if (sw < 40f || sh < 30f) return;
 
@@ -988,7 +988,7 @@ internal sealed class Renderer : IDisposable
         var box = new RoundedRectangle { Rect = new Rect(cr.X, cr.Y, cr.Width, cr.Height), RadiusX = 4f, RadiusY = 4f };
         if (hoverClose) { _red.Opacity = opacity; _d2d.FillRoundedRectangle(box, _red); _red.Opacity = 1f; }
         else { _badgeBg.Opacity = opacity * 0.6f; _d2d.FillRoundedRectangle(box, _badgeBg); _badgeBg.Opacity = 1f; }
-        float cx = cr.X + cr.Width * 0.5f, cy = cr.Y + cr.Height * 0.5f, d = 4f;
+        float cx = cr.X + (cr.Width * 0.5f), cy = cr.Y + (cr.Height * 0.5f), d = 4f;
         _text.Opacity = opacity;
         _d2d.DrawLine(new Vector2(cx - d, cy - d), new Vector2(cx + d, cy + d), _text, 1.7f, _roundStroke);
         _d2d.DrawLine(new Vector2(cx - d, cy + d), new Vector2(cx + d, cy - d), _text, 1.7f, _roundStroke);
@@ -1006,7 +1006,7 @@ internal sealed class Renderer : IDisposable
         _borderSel.Opacity = opacity;
         _d2d.DrawRoundedRectangle(rr, _borderSel, 3.5f / MathF.Max(zoom, 0.001f));
 
-        float midX = it.WorldPos.X + it.WorldSize.X * 0.5f;
+        var midX = it.WorldPos.X + (it.WorldSize.X * 0.5f);
         _d2d.DrawLine(new Vector2(midX, it.WorldPos.Y + 4f), new Vector2(midX, it.WorldPos.Y + it.WorldSize.Y - 4f),
             _borderSel, 2f / MathF.Max(zoom, 0.001f));
 
@@ -1021,24 +1021,26 @@ internal sealed class Renderer : IDisposable
         var center = new Dictionary<string, Vector2>(StringComparer.Ordinal);
         foreach (var it in items) center[it.AppKey] = it.WorldCenter;
         if (ghosts != null) foreach (var g in ghosts) center[g.AppKey] = g.Center;
-        float w = 3.5f / MathF.Max(zoom, 0.01f);
+        var w = 3.5f / MathF.Max(zoom, 0.01f);
         foreach (var ws in workspaces)
         {
             SetDyn(ws.Tint, 0.65f * opacity);
             foreach (var l in ws.Links)
+            {
                 if (center.TryGetValue(l.A, out var a) && center.TryGetValue(l.B, out var b))
                 {
                     _d2d.DrawLine(a, b, _dyn, w, _roundStroke);
                     _d2d.FillEllipse(new Ellipse(a, w * 1.3f, w * 1.3f), _dyn);
                     _d2d.FillEllipse(new Ellipse(b, w * 1.3f, w * 1.3f), _dyn);
                 }
+            }
         }
     }
 
     private void DrawGhosts(IReadOnlyList<GhostTile> ghosts, float zoom, float opacity)
     {
         if (opacity <= 0.01f) return;
-        float bw = 2.5f / MathF.Max(zoom, 0.01f);
+        var bw = 2.5f / MathF.Max(zoom, 0.01f);
         foreach (var g in ghosts)
         {
             var rect = new Rect(g.Pos.X, g.Pos.Y, g.Size.X, g.Size.Y);
@@ -1050,15 +1052,15 @@ internal sealed class Renderer : IDisposable
             _d2d.DrawRoundedRectangle(rr, _dyn, bw);
 
             _text.Opacity = 0.85f * opacity;
-            var titleRect = new Rect(rect.X + 12f, rect.Y + g.Size.Y * 0.5f - 26f, rect.Right - 12f, rect.Y + g.Size.Y * 0.5f);
+            var titleRect = new Rect(rect.X + 12f, rect.Y + (g.Size.Y * 0.5f) - 26f, rect.Right - 12f, rect.Y + (g.Size.Y * 0.5f));
             _d2d.DrawText(g.Title, _titleFormat, titleRect, _text, DrawTextOptions.Clip);
             _textDim.Opacity = 0.8f * opacity;
-            var hintRect = new Rect(rect.X + 12f, rect.Y + g.Size.Y * 0.5f + 2f, rect.Right - 12f, rect.Y + g.Size.Y * 0.5f + 26f);
+            var hintRect = new Rect(rect.X + 12f, rect.Y + (g.Size.Y * 0.5f) + 2f, rect.Right - 12f, rect.Y + (g.Size.Y * 0.5f) + 26f);
             _d2d.DrawText("closed — click to reopen", _hintFormat, hintRect, _textDim, DrawTextOptions.Clip);
         }
     }
 
-    private readonly List<(string id, RectangleF rect)> _wsLabelRects = new();
+    private readonly List<(string id, RectangleF rect)> _wsLabelRects = [];
     public IReadOnlyList<(string id, RectangleF rect)> WorkspaceLabelRects => _wsLabelRects;
 
     private void DrawWorkspaceLabels(Camera cam, IReadOnlyList<Workspace> workspaces,
@@ -1072,21 +1074,24 @@ internal sealed class Renderer : IDisposable
 
         foreach (var ws in workspaces)
         {
-            float sumX = 0f, minTop = float.MaxValue; int n = 0;
+            float sumX = 0f, minTop = float.MaxValue; var n = 0;
             foreach (var m in ws.Members)
+            {
                 if (map.TryGetValue(m, out var pt))
                 {
                     sumX += pt.cx; n++;
                     if (pt.top < minTop) minTop = pt.top;
                 }
+            }
+
             if (n == 0) continue;
 
-            Vector2 sp = cam.WorldToScreen(new Vector2(sumX / n, minTop));
+            var sp = cam.WorldToScreen(new Vector2(sumX / n, minTop));
             using var layout = _dwrite.CreateTextLayout(ws.Name, _titleFormat, 4000f, 200f);
             var mt = layout.Metrics;
-            float padX = 13f, padY = 5f;
-            float w = mt.Width + padX * 2f, h = mt.Height + padY * 2f;
-            var pill = new Rect(sp.X - w * 0.5f, sp.Y - h - 10f, w, h);
+            const float padX = 13f, padY = 5f;
+            float w = mt.Width + (padX * 2f), h = mt.Height + (padY * 2f);
+            var pill = new Rect(sp.X - (w * 0.5f), sp.Y - h - 10f, w, h);
             _wsLabelRects.Add((ws.Id, new RectangleF(pill.X, pill.Y, pill.Width, pill.Height)));
 
             var rr = new RoundedRectangle { Rect = pill, RadiusX = h * 0.5f, RadiusY = h * 0.5f };
@@ -1094,7 +1099,7 @@ internal sealed class Renderer : IDisposable
             _d2d.FillRoundedRectangle(rr, _dyn);
 
             int rr8 = (ws.Tint >> 16) & 0xFF, gg = (ws.Tint >> 8) & 0xFF, bb = ws.Tint & 0xFF;
-            float lum = (0.299f * rr8 + 0.587f * gg + 0.114f * bb) / 255f;
+            var lum = ((0.299f * rr8) + (0.587f * gg) + (0.114f * bb)) / 255f;
             SetDyn(lum > 0.62f ? Theme.Rgb(18, 20, 24) : Theme.Rgb(240, 243, 248), opacity);
             _d2d.DrawText(ws.Name, _titleFormat, pill, _dyn, DrawTextOptions.None);
         }
@@ -1104,20 +1109,20 @@ internal sealed class Renderer : IDisposable
     {
         var size = bmp.Size;
         if (size.Width < 1 || size.Height < 1) return false;
-        float ta = rect.Width / MathF.Max(1f, rect.Height);
-        float ba = size.Width / MathF.Max(1f, size.Height);
-        float ratio = ba / MathF.Max(0.001f, ta);
-        return ratio > 0.75f && ratio < 1.34f;
+        var ta = rect.Width / MathF.Max(1f, rect.Height);
+        var ba = size.Width / MathF.Max(1f, size.Height);
+        var ratio = ba / MathF.Max(0.001f, ta);
+        return ratio is > 0.75f and < 1.34f;
     }
 
     private void DrawTileBitmap(ID2D1Bitmap bmp, Rect rect, RoundedRectangle rounded, float alpha)
     {
         var size = bmp.Size;
-        float ta = rect.Width / MathF.Max(1f, rect.Height);
-        float ba = size.Width / MathF.Max(1f, size.Height);
+        var ta = rect.Width / MathF.Max(1f, rect.Height);
+        var ba = size.Width / MathF.Max(1f, size.Height);
         Rect src;
-        if (ba > ta) { float w = size.Height * ta; src = new Rect((size.Width - w) * 0.5f, 0f, w, size.Height); }
-        else { float h = size.Width / ta; src = new Rect(0f, (size.Height - h) * 0.5f, size.Width, h); }
+        if (ba > ta) { var w = size.Height * ta; src = new Rect((size.Width - w) * 0.5f, 0f, w, size.Height); }
+        else { var h = size.Width / ta; src = new Rect(0f, (size.Height - h) * 0.5f, size.Width, h); }
 
         if (rounded.RadiusX <= 0.5f)
         {
@@ -1154,18 +1159,18 @@ internal sealed class Renderer : IDisposable
         _borderSel.Opacity = opacity;
         _glow.Opacity = opacity;
 
-        float gx = it.WorldSize.X * (lift - 1f) * 0.5f;
-        float gy = it.WorldSize.Y * (lift - 1f) * 0.5f;
+        var gx = it.WorldSize.X * (lift - 1f) * 0.5f;
+        var gy = it.WorldSize.Y * (lift - 1f) * 0.5f;
         var rect = new Rect(it.WorldPos.X - gx, it.WorldPos.Y - gy, it.WorldSize.X * lift, it.WorldSize.Y * lift);
 
-        float r = _theme.CornerRadius * cornerScale;
+        var r = _theme.CornerRadius * cornerScale;
 
         if (_theme.WindowShadows)
         {
-            float sh = 14f;
+            const float sh = 14f;
             var shadowRect = new RoundedRectangle
             {
-                Rect = new Rect(rect.X - sh * 0.3f, rect.Y + sh * 0.4f, rect.Width + sh * 0.6f, rect.Height + sh * 0.6f),
+                Rect = new Rect(rect.X - (sh * 0.3f), rect.Y + (sh * 0.4f), rect.Width + (sh * 0.6f), rect.Height + (sh * 0.6f)),
                 RadiusX = r + 6f,
                 RadiusY = r + 6f,
             };
@@ -1177,8 +1182,8 @@ internal sealed class Renderer : IDisposable
         _d2d.FillRoundedRectangle(rounded, _placeholder);
 
         var snap = SnapshotProvider?.Invoke(it);
-        bool liveReady = content != null && AspectClose(content, rect);
-        bool useLive = content != null && (liveReady || snap == null);
+        var liveReady = content != null && AspectClose(content, rect);
+        var useLive = content != null && (liveReady || snap == null);
 
         if (snap != null && (!useLive || contentFade < 0.999f))
             DrawTileBitmap(snap, rect, rounded, opacity);
@@ -1194,19 +1199,19 @@ internal sealed class Renderer : IDisposable
 
         if (highlight && _theme.GlowIntensity > 0 && highlightFade > 0.001f)
         {
-            float z = MathF.Max(zoom, 0.001f);
-            float step = 6f / z;
-            float maxA = opacity * (_theme.GlowIntensity / 100f) * 0.6f * highlightFade;
-            for (int k = 0; k < 5; k++)
+            var z = MathF.Max(zoom, 0.001f);
+            var step = 6f / z;
+            var maxA = opacity * (_theme.GlowIntensity / 100f) * 0.6f * highlightFade;
+            for (var k = 0; k < 5; k++)
             {
-                float c = (k + 0.5f) * step;
+                var c = (k + 0.5f) * step;
                 var gr = new RoundedRectangle
                 {
-                    Rect = new Rect(rect.X - c, rect.Y - c, rect.Width + 2f * c, rect.Height + 2f * c),
+                    Rect = new Rect(rect.X - c, rect.Y - c, rect.Width + (2f * c), rect.Height + (2f * c)),
                     RadiusX = r + c,
                     RadiusY = r + c,
                 };
-                _borderSel.Opacity = maxA * (1f - k / 5f);
+                _borderSel.Opacity = maxA * (1f - (k / 5f));
                 _d2d.DrawRoundedRectangle(gr, _borderSel, step);
             }
             _borderSel.Opacity = opacity;
@@ -1214,8 +1219,8 @@ internal sealed class Renderer : IDisposable
 
         if ((highlight || _theme.ShowTileOutline) && highlightFade > 0.001f)
         {
-            float baseW = Math.Clamp(_theme.BorderThickness, 4, 40) / 10f;
-            float bw = (highlight ? baseW * 2f : baseW) / MathF.Max(zoom, 0.001f);
+            var baseW = Math.Clamp(_theme.BorderThickness, 4, 40) / 10f;
+            var bw = (highlight ? baseW * 2f : baseW) / MathF.Max(zoom, 0.001f);
             var brush = highlight ? _borderSel : _border;
 
             brush.Opacity = opacity * highlightFade;
@@ -1237,19 +1242,23 @@ internal sealed class Renderer : IDisposable
 
         if (items.Count == 0)
         {
-            float midY = _safeTop + (_height - _safeTop - _safeBottom) * 0.5f - 16f;
+            var midY = _safeTop + ((_height - _safeTop - _safeBottom) * 0.5f) - 16f;
             _d2d.DrawText("No windows found", _captionFormat,
                 new Rect(0, midY, _width, 32f), _textDim, DrawTextOptions.Clip);
         }
         else
         {
             if (_theme.ShowTitles && selectedIndex >= 0 && selectedIndex < items.Count)
+            {
                 _d2d.DrawText(items[selectedIndex].Title, _captionFormat,
                     new Rect(0, _safeTop + 22f, _width, 30f), _text, DrawTextOptions.Clip);
+            }
 
             if (_theme.ShowHints)
+            {
                 _d2d.DrawText("drag pan · scroll zoom · W overview · click/Enter switch · right-click for notes & images · drag pins to move · X to remove · Esc",
                     _hintFormat, new Rect(0, _height - _safeBottom - 34f, _width, 24f), _textDim, DrawTextOptions.Clip);
+            }
         }
 
         _text.Opacity = 1f;

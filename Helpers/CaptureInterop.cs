@@ -23,8 +23,8 @@ internal static class CaptureInterop
     {
         var factory = ActivationFactory.Get("Windows.Graphics.Capture.GraphicsCaptureItem");
         var interop = factory.AsInterface<IGraphicsCaptureItemInterop>();
-        Guid iid = GraphicsCaptureItemIid;
-        IntPtr itemPtr = interop.CreateForWindow(hwnd, ref iid);
+        var iid = GraphicsCaptureItemIid;
+        var itemPtr = interop.CreateForWindow(hwnd, ref iid);
         var item = GraphicsCaptureItem.FromAbi(itemPtr);
         Marshal.Release(itemPtr);
         return item;
@@ -35,7 +35,7 @@ internal static class CaptureInterop
 
     public static IDirect3DDevice CreateDirect3DDevice(IntPtr dxgiDevicePtr)
     {
-        int hr = CreateDirect3D11DeviceFromDXGIDevice(dxgiDevicePtr, out IntPtr graphicsDevice);
+        var hr = CreateDirect3D11DeviceFromDXGIDevice(dxgiDevicePtr, out var graphicsDevice);
         if (hr != 0) Marshal.ThrowExceptionForHR(hr);
         var device = MarshalInterface<IDirect3DDevice>.FromAbi(graphicsDevice);
         Marshal.Release(graphicsDevice);
@@ -55,7 +55,7 @@ internal static class CaptureInterop
     public static IntPtr GetTexturePointer(IDirect3DSurface surface)
     {
         var access = surface.As<IDirect3DDxgiInterfaceAccess>();
-        Guid iid = ID3D11Texture2DIid;
+        var iid = ID3D11Texture2DIid;
         return access.GetInterface(ref iid);
     }
 }

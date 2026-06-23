@@ -4,20 +4,20 @@ namespace PrinceWM.Helpers;
 
 internal static class PinStore
 {
-    private static readonly string Dir =
+    private static readonly string _dir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM");
 
-    private static readonly string FilePath = Path.Combine(Dir, "pins.json");
+    private static readonly string _filePath = Path.Combine(_dir, "pins.json");
 
-    public static string ImagesDir => Path.Combine(Dir, "pins");
+    public static string ImagesDir => Path.Combine(_dir, "pins");
 
     public static List<Pin> Load()
     {
         try
         {
-            if (!File.Exists(FilePath)) return new();
-            var list = JsonSerializer.Deserialize<List<Pin>>(File.ReadAllText(FilePath));
-            if (list == null) return new();
+            if (!File.Exists(_filePath)) return [];
+            var list = JsonSerializer.Deserialize<List<Pin>>(File.ReadAllText(_filePath));
+            if (list == null) return [];
 
             list.RemoveAll(p => p.Kind == PinKind.Image &&
                 (string.IsNullOrEmpty(p.ImageFile) || !File.Exists(Path.Combine(ImagesDir, p.ImageFile))));
@@ -26,7 +26,7 @@ internal static class PinStore
         catch (Exception ex)
         {
             Log.Ex("PinStore.Load", ex);
-            return new();
+            return [];
         }
     }
 
@@ -34,8 +34,8 @@ internal static class PinStore
     {
         try
         {
-            Directory.CreateDirectory(Dir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(pins));
+            Directory.CreateDirectory(_dir);
+            File.WriteAllText(_filePath, JsonSerializer.Serialize(pins));
         }
         catch (Exception ex) { Log.Ex("PinStore.Save", ex); }
     }
@@ -45,7 +45,7 @@ internal static class PinStore
         try
         {
             Directory.CreateDirectory(ImagesDir);
-            string name = Guid.NewGuid().ToString("N") + ".png";
+            var name = Guid.NewGuid().ToString("N") + ".png";
             img.Save(Path.Combine(ImagesDir, name), System.Drawing.Imaging.ImageFormat.Png);
             return name;
         }

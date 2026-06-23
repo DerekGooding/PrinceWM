@@ -1,4 +1,3 @@
-using PrinceWM.Helpers;
 using System.Drawing.Drawing2D;
 
 namespace PrinceWM.UI;
@@ -36,7 +35,7 @@ internal sealed class FlatToggle : Control
         using (var brush = new SolidBrush(_checked ? ModernUI.Accent : ModernUI.TrackOff))
             g.FillPath(brush, path);
 
-        int knobX = _checked ? track.Right - 18 : track.Left + 2;
+        var knobX = _checked ? track.Right - 18 : track.Left + 2;
         using var knob = new SolidBrush(Color.White);
         g.FillEllipse(knob, knobX, track.Top + 2, 16, 16);
     }

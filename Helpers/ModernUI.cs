@@ -15,7 +15,7 @@ internal static class ModernUI
 
     public static void RoundCorners(IntPtr hwnd)
     {
-        int pref = 2;
+        var pref = 2;
         DwmSetWindowAttribute(hwnd, 33, ref pref, sizeof(int));
     }
 
@@ -42,11 +42,11 @@ internal static class ModernUI
     public static void Acrylic(IntPtr hwnd, uint tintArgb)
     {
         uint a = (tintArgb >> 24) & 0xFF, r = (tintArgb >> 16) & 0xFF, g = (tintArgb >> 8) & 0xFF, b = tintArgb & 0xFF;
-        uint abgr = (a << 24) | (b << 16) | (g << 8) | r;
+        var abgr = (a << 24) | (b << 16) | (g << 8) | r;
 
         var accent = new AccentPolicy { AccentState = 4, GradientColor = abgr };
-        int size = Marshal.SizeOf(accent);
-        IntPtr ptr = Marshal.AllocHGlobal(size);
+        var size = Marshal.SizeOf(accent);
+        var ptr = Marshal.AllocHGlobal(size);
         try
         {
             Marshal.StructureToPtr(accent, ptr, false);
@@ -58,7 +58,7 @@ internal static class ModernUI
 
     public static GraphicsPath RoundedRect(Rectangle r, int radius)
     {
-        int d = radius * 2;
+        var d = radius * 2;
         var p = new GraphicsPath();
         p.AddArc(r.X, r.Y, d, d, 180, 90);
         p.AddArc(r.Right - d, r.Y, d, d, 270, 90);

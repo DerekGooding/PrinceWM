@@ -8,12 +8,12 @@ internal static class WindowTiling
     {
         if (left == IntPtr.Zero || right == IntPtr.Zero || left == right) return;
 
-        IntPtr mon = MonitorFromWindow(anchor, MONITOR_DEFAULTTONEAREST);
+        var mon = MonitorFromWindow(anchor, MONITOR_DEFAULTTONEAREST);
         var mi = new MONITORINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<MONITORINFO>() };
         if (!GetMonitorInfo(mon, ref mi)) return;
-        RECT wa = mi.rcWork;
+        var wa = mi.rcWork;
 
-        int halfW = wa.Width / 2;
+        var halfW = wa.Width / 2;
         Place(left, wa.Left, wa.Top, halfW, wa.Height);
         Place(right, wa.Left + halfW, wa.Top, wa.Width - halfW, wa.Height);
 

@@ -13,10 +13,9 @@ internal static class DrawStore
     {
         try
         {
-            if (!File.Exists(FilePath)) return new();
-            return JsonSerializer.Deserialize<List<Stroke>>(File.ReadAllText(FilePath)) ?? new();
+            return !File.Exists(FilePath) ? [] : JsonSerializer.Deserialize<List<Stroke>>(File.ReadAllText(FilePath)) ?? [];
         }
-        catch (Exception ex) { Log.Ex("DrawStore.Load", ex); return new(); }
+        catch (Exception ex) { Log.Ex("DrawStore.Load", ex); return []; }
     }
 
     public static void Save(List<Stroke> strokes)

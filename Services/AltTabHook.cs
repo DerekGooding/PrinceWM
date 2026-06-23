@@ -1,4 +1,3 @@
-using PrinceWM.Model;
 using System.Runtime.InteropServices;
 using static PrinceWM.Helpers.NativeMethods;
 
@@ -54,7 +53,7 @@ internal sealed class AltTabHook : IDisposable
         if ((hook.flags & LLKHF_INJECTED) != 0)
             return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
 
-        int msg = (int)wParam;
+        var msg = (int)wParam;
 
         if ((msg == WM_KEYUP || msg == WM_SYSKEYUP) && OverlayOpen)
         {
@@ -62,10 +61,10 @@ internal sealed class AltTabHook : IDisposable
             if (up.vkCode == VK_SNAPSHOT) { ScreenshotKey?.Invoke(); return 1; }
         }
 
-        if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN)
+        if (msg is WM_KEYDOWN or WM_SYSKEYDOWN)
         {
             var data = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
-            uint vk = data.vkCode;
+            var vk = data.vkCode;
 
             if (Capturing)
             {
@@ -79,15 +78,15 @@ internal sealed class AltTabHook : IDisposable
 
             if ((int)vk == SummonKey && ModsHeld(SummonMods))
             {
-                bool reverse = (SummonMods & ModShift) == 0 && IsDown(VK_SHIFT);
+                var reverse = (SummonMods & ModShift) == 0 && IsDown(VK_SHIFT);
                 AltTabPressed?.Invoke(reverse);
                 return 1;
             }
 
             if (OverlayOpen)
             {
-                int k = (int)vk;
-                NavKey nav =
+                var k = (int)vk;
+                var nav =
                     k == CancelKey ? NavKey.Escape :
                     k == CommitKey ? NavKey.Enter :
                     k == MoveLeftKey ? NavKey.Left :
@@ -108,13 +107,11 @@ internal sealed class AltTabHook : IDisposable
 
     private static bool IsDown(uint vk) => (GetAsyncKeyState((int)vk) & 0x8000) != 0;
 
-    private static bool IsModifier(uint vk) =>
-        vk == VK_MENU || vk == VK_CONTROL || vk == VK_SHIFT || vk == VK_LWIN || vk == VK_RWIN ||
-        (vk >= 0xA0 && vk <= 0xA5);
+    private static bool IsModifier(uint vk) => vk is VK_MENU or VK_CONTROL or VK_SHIFT or VK_LWIN or VK_RWIN or >= 0xA0 and <= 0xA5;
 
     private static int CurrentMods()
     {
-        int m = 0;
+        var m = 0;
         if (IsDown(VK_MENU)) m |= ModAlt;
         if (IsDown(VK_CONTROL)) m |= ModCtrl;
         if (IsDown(VK_SHIFT)) m |= ModShift;
@@ -123,13 +120,10 @@ internal sealed class AltTabHook : IDisposable
     }
 
     private static bool ModsHeld(int mods)
-    {
-        if ((mods & ModAlt) != 0 && !IsDown(VK_MENU)) return false;
-        if ((mods & ModCtrl) != 0 && !IsDown(VK_CONTROL)) return false;
-        if ((mods & ModShift) != 0 && !IsDown(VK_SHIFT)) return false;
-        if ((mods & ModWin) != 0 && !(IsDown(VK_LWIN) || IsDown(VK_RWIN))) return false;
-        return mods != 0;
-    }
+        => ((mods & ModAlt) == 0 || IsDown(VK_MENU))
+            && ((mods & ModCtrl) == 0 || IsDown(VK_CONTROL))
+            && ((mods & ModShift) == 0 || IsDown(VK_SHIFT))
+            && ((mods & ModWin) == 0 || (IsDown(VK_LWIN) || IsDown(VK_RWIN))) && mods != 0;
 
     public void Dispose()
     {

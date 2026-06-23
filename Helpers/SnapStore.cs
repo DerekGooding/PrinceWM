@@ -4,21 +4,21 @@ namespace PrinceWM.Helpers;
 
 internal static class SnapStore
 {
-    private static readonly string Dir =
+    private static readonly string _dir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM", "snaps");
 
     private static string FileFor(string appKey)
     {
         var sb = new StringBuilder(appKey.Length);
-        foreach (char c in appKey) sb.Append(char.IsLetterOrDigit(c) ? c : '_');
-        string name = sb.ToString();
+        foreach (var c in appKey) sb.Append(char.IsLetterOrDigit(c) ? c : '_');
+        var name = sb.ToString();
         if (name.Length > 96) name = name[..96];
-        return Path.Combine(Dir, name + ".jpg");
+        return Path.Combine(_dir, name + ".jpg");
     }
 
     public static string? PathIfExists(string appKey)
     {
-        string p = FileFor(appKey);
+        var p = FileFor(appKey);
         return File.Exists(p) ? p : null;
     }
 
@@ -26,7 +26,7 @@ internal static class SnapStore
     {
         try
         {
-            Directory.CreateDirectory(Dir);
+            Directory.CreateDirectory(_dir);
             bmp.Save(FileFor(appKey), System.Drawing.Imaging.ImageFormat.Jpeg);
         }
         catch (Exception ex) { Log.Ex("SnapStore.Save", ex); }

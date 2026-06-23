@@ -7,12 +7,8 @@ internal sealed class Camera
     public Vector2 Viewport;
     public float Zoom = 1f;
     public Vector2 Center;
-
-    private float _targetZoom = 1f;
     private Vector2 _targetCenter;
     private Vector2 _panVel;
-
-    private bool _tweening;
     private bool _tweenEaseOut;
     private float _tweenPow = 5f;
     private float _tweenT, _tweenDur;
@@ -25,58 +21,58 @@ internal sealed class Camera
     public static float DurationScale = 1f;
 
     public Vector2 TargetCenter => _targetCenter;
-    public float TargetZoom => _targetZoom;
+    public float TargetZoom { get; private set; } = 1f;
 
-    public bool IsAnimating => _tweening;
+    public bool IsAnimating { get; private set; }
 
     public void SnapTo(Vector2 center, float zoom)
     {
-        _tweening = false;
+        IsAnimating = false;
         Center = _targetCenter = center;
-        Zoom = _targetZoom = Math.Clamp(zoom, MinZoom, MaxZoom);
+        Zoom = TargetZoom = Math.Clamp(zoom, MinZoom, MaxZoom);
         _panVel = Vector2.Zero;
     }
 
     private void SetTarget(Vector2 center, float zoom)
     {
         _targetCenter = center;
-        _targetZoom = Math.Clamp(zoom, MinZoom, MaxZoom);
+        TargetZoom = Math.Clamp(zoom, MinZoom, MaxZoom);
     }
 
-    public Vector2 WorldToScreen(Vector2 world) => (world - Center) * Zoom + Viewport * 0.5f;
+    public Vector2 WorldToScreen(Vector2 world) => ((world - Center) * Zoom) + (Viewport * 0.5f);
 
-    public Vector2 ScreenToWorld(Vector2 screen) => (screen - Viewport * 0.5f) / Zoom + Center;
+    public Vector2 ScreenToWorld(Vector2 screen) => ((screen - (Viewport * 0.5f)) / Zoom) + Center;
 
     private Vector2 ScreenToWorldTarget(Vector2 screen) =>
-        (screen - Viewport * 0.5f) / _targetZoom + _targetCenter;
+        ((screen - (Viewport * 0.5f)) / TargetZoom) + _targetCenter;
 
     private void CancelTween()
     {
-        if (!_tweening) return;
-        _tweening = false;
+        if (!IsAnimating) return;
+        IsAnimating = false;
         _targetCenter = Center;
-        _targetZoom = Zoom;
+        TargetZoom = Zoom;
     }
 
     public void PanByScreen(Vector2 screenDelta)
     {
         CancelTween();
-        _targetCenter -= screenDelta / _targetZoom;
+        _targetCenter -= screenDelta / TargetZoom;
         _panVel = Vector2.Zero;
     }
 
     public void Flick(Vector2 screenVelocity)
     {
         CancelTween();
-        _panVel = -screenVelocity / _targetZoom;
+        _panVel = -screenVelocity / TargetZoom;
     }
 
     public void ZoomAt(Vector2 screenAnchor, float factor)
     {
         CancelTween();
-        Vector2 before = ScreenToWorldTarget(screenAnchor);
-        _targetZoom = Math.Clamp(_targetZoom * factor, MinZoom, MaxZoom);
-        Vector2 after = ScreenToWorldTarget(screenAnchor);
+        var before = ScreenToWorldTarget(screenAnchor);
+        TargetZoom = Math.Clamp(TargetZoom * factor, MinZoom, MaxZoom);
+        var after = ScreenToWorldTarget(screenAnchor);
         _targetCenter += before - after;
     }
 
@@ -92,14 +88,14 @@ internal sealed class Camera
         _tweenDur = MathF.Max(0.0001f, duration * DurationScale);
         _tweenEaseOut = easeOut;
         _tweenPow = easeOutPower;
-        _tweening = true;
+        IsAnimating = true;
         _panVel = Vector2.Zero;
         _targetCenter = _tweenEndC;
-        _targetZoom = _tweenEndZ;
+        TargetZoom = _tweenEndZ;
     }
 
     public void CenterOn(Vector2 worldCenter, float duration = 0.22f) =>
-        TweenTo(worldCenter, _targetZoom, duration);
+        TweenTo(worldCenter, TargetZoom, duration);
 
     public void PanTargetTo(Vector2 worldCenter)
     {
@@ -112,14 +108,14 @@ internal sealed class Camera
 
     public void FocusOn(WindowItem item)
     {
-        float pad = 1.4f;
-        float zoom = MathF.Min(Viewport.X / (item.WorldSize.X * pad), Viewport.Y / (item.WorldSize.Y * pad));
+        const float pad = 1.4f;
+        var zoom = MathF.Min(Viewport.X / (item.WorldSize.X * pad), Viewport.Y / (item.WorldSize.Y * pad));
         TweenTo(item.WorldCenter, zoom, 0.26f);
     }
 
     public void FocusFill(WindowItem item, float duration)
     {
-        float zoom = MathF.Max(Viewport.X / item.WorldSize.X, Viewport.Y / item.WorldSize.Y);
+        var zoom = MathF.Max(Viewport.X / item.WorldSize.X, Viewport.Y / item.WorldSize.Y);
         TweenTo(item.WorldCenter, zoom, duration, easeOut: true);
     }
 
@@ -141,10 +137,10 @@ internal sealed class Camera
         }
 
         var center = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
-        float spanX = MathF.Max(1f, maxX - minX);
-        float spanY = MathF.Max(1f, maxY - minY);
-        float pad = 1f + marginFraction * 2f;
-        float zoom = MathF.Min(Viewport.X / (spanX * pad), Viewport.Y / (spanY * pad));
+        var spanX = MathF.Max(1f, maxX - minX);
+        var spanY = MathF.Max(1f, maxY - minY);
+        var pad = 1f + (marginFraction * 2f);
+        var zoom = MathF.Min(Viewport.X / (spanX * pad), Viewport.Y / (spanY * pad));
         zoom = Math.Clamp(zoom, MinZoom, MaxZoom);
 
         if (animate) TweenTo(center, zoom, 0.38f); else SnapTo(center, zoom);
@@ -156,17 +152,17 @@ internal sealed class Camera
 
     public void Step(float dt)
     {
-        if (_tweening)
+        if (IsAnimating)
         {
             _tweenT += dt;
-            float u = Math.Clamp(_tweenT / _tweenDur, 0f, 1f);
-            float e = _tweenEaseOut ? EaseOutP(u, _tweenPow) : Smoother(u);
+            var u = Math.Clamp(_tweenT / _tweenDur, 0f, 1f);
+            var e = _tweenEaseOut ? EaseOutP(u, _tweenPow) : Smoother(u);
             Center = Vector2.Lerp(_tweenStartC, _tweenEndC, e);
 
             Zoom = _tweenStartZ * MathF.Pow(_tweenEndZ / _tweenStartZ, e);
             if (u >= 1f)
             {
-                _tweening = false;
+                IsAnimating = false;
                 Center = _tweenEndC;
                 Zoom = _tweenEndZ;
             }
@@ -180,16 +176,16 @@ internal sealed class Camera
             if (_panVel.LengthSquared() < 0.01f) _panVel = Vector2.Zero;
         }
 
-        float t = 1f - MathF.Exp(-dt * 16f);
+        var t = 1f - MathF.Exp(-dt * 16f);
         Center = Vector2.Lerp(Center, _targetCenter, t);
 
-        Zoom *= MathF.Pow(_targetZoom / MathF.Max(Zoom, 1e-4f), t);
+        Zoom *= MathF.Pow(TargetZoom / MathF.Max(Zoom, 1e-4f), t);
     }
 
-    private static float Smoother(float u) => u * u * u * (u * (u * 6f - 15f) + 10f);
+    private static float Smoother(float u) => u * u * u * ((u * ((u * 6f) - 15f)) + 10f);
 
     private static float EaseOut(float u)
-    { float p = 1f - u; return 1f - p * p * p * p * p; }
+    { var p = 1f - u; return 1f - (p * p * p * p * p); }
 
     private static float EaseOutP(float u, float power) => 1f - MathF.Pow(1f - u, power);
 

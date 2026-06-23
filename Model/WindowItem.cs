@@ -18,9 +18,9 @@ internal sealed class WindowItem
 
     public int StackCount { get; set; } = 1;
 
-    public List<IntPtr> StackHwnds { get; set; } = new();
+    public List<IntPtr> StackHwnds { get; set; } = [];
 
-    public Vector2 WorldCenter => WorldPos + WorldSize * 0.5f;
+    public Vector2 WorldCenter => WorldPos + (WorldSize * 0.5f);
 
     public bool Sliding;
     public Vector2 SlideTarget;

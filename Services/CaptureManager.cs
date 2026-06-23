@@ -10,7 +10,7 @@ internal sealed class CaptureManager : IDisposable
     private readonly ID2D1DeviceContext _d2d;
     private readonly IDirect3DDevice _rtDevice;
 
-    private readonly Dictionary<IntPtr, WindowCapture> _caps = new();
+    private readonly Dictionary<IntPtr, WindowCapture> _caps = [];
     private readonly IconCache _iconCache;
 
     public ID2D1Bitmap? GetIcon(WindowItem it) => _iconCache.Get(it);
@@ -71,8 +71,8 @@ internal sealed class CaptureManager : IDisposable
         }
     }
 
-    private readonly Dictionary<IntPtr, int> _healAttempts = new();
-    private readonly Dictionary<IntPtr, int> _failCounts = new();
+    private readonly Dictionary<IntPtr, int> _healAttempts = [];
+    private readonly Dictionary<IntPtr, int> _failCounts = [];
 
     public void Update()
     {
@@ -84,7 +84,7 @@ internal sealed class CaptureManager : IDisposable
         try { _wallpaper?.Update(); } catch { }
     }
 
-    private readonly List<IntPtr> _keyBuf = new();
+    private readonly List<IntPtr> _keyBuf = [];
     private int _rrCursor;
 
     public void UpdateStaggered(int budget)
@@ -93,13 +93,13 @@ internal sealed class CaptureManager : IDisposable
         {
             _keyBuf.Clear();
             _keyBuf.AddRange(_caps.Keys);
-            int n = _keyBuf.Count;
+            var n = _keyBuf.Count;
             budget = Math.Min(budget, n);
             List<IntPtr>? heal = null, drop = null;
-            for (int k = 0; k < budget; k++)
+            for (var k = 0; k < budget; k++)
             {
                 if (_rrCursor >= n) _rrCursor = 0;
-                IntPtr hwnd = _keyBuf[_rrCursor++];
+                var hwnd = _keyBuf[_rrCursor++];
                 if (_caps.TryGetValue(hwnd, out var cap))
                     PumpOne(hwnd, cap, ref heal, ref drop);
             }
@@ -117,23 +117,26 @@ internal sealed class CaptureManager : IDisposable
         }
         catch (Exception ex)
         {
-            int f = _failCounts.GetValueOrDefault(hwnd) + 1;
+            var f = _failCounts.GetValueOrDefault(hwnd) + 1;
             _failCounts[hwnd] = f;
-            if (f >= 3) { Log.Ex("Capture dropped (repeated failure)", ex); (drop ??= new()).Add(hwnd); }
+            if (f >= 3) { Log.Ex("Capture dropped (repeated failure)", ex); (drop ??= []).Add(hwnd); }
             return;
         }
 
         if (cap.HasContent && !cap.IsClosed) { _healAttempts.Remove(hwnd); return; }
 
-        bool dead = cap.IsClosed || (!cap.HasContent && cap.LooksDead);
+        var dead = cap.IsClosed || (!cap.HasContent && cap.LooksDead);
         if (dead && NativeMethods.IsWindow(hwnd) &&
             _healAttempts.GetValueOrDefault(hwnd) < 5)
-            (heal ??= new()).Add(hwnd);
+        {
+            (heal ??= []).Add(hwnd);
+        }
     }
 
     private void ApplyDropHeal(List<IntPtr>? drop, List<IntPtr>? heal)
     {
         if (drop != null)
+        {
             foreach (var hwnd in drop)
             {
                 try { _caps[hwnd].Dispose(); } catch { }
@@ -141,10 +144,15 @@ internal sealed class CaptureManager : IDisposable
                 _healAttempts.Remove(hwnd);
                 _failCounts.Remove(hwnd);
             }
+        }
 
         if (heal != null)
+        {
             foreach (var hwnd in heal)
+            {
                 Rebuild(hwnd);
+            }
+        }
     }
 
     private void Rebuild(IntPtr hwnd)
@@ -225,7 +233,7 @@ internal sealed class CaptureManager : IDisposable
     public ID2D1Bitmap? GetBitmap(IntPtr hwnd) =>
         _caps.TryGetValue(hwnd, out var cap) && !cap.IsClosed ? cap.Bitmap : null;
 
-    private readonly Dictionary<IntPtr, string> _appKeys = new();
+    private readonly Dictionary<IntPtr, string> _appKeys = [];
     private readonly Dictionary<string, ID2D1Bitmap?> _snapCache = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DateTime> _snapSaved = new(StringComparer.Ordinal);
 
@@ -233,7 +241,7 @@ internal sealed class CaptureManager : IDisposable
     {
         if (_snapCache.TryGetValue(appKey, out var cached)) return cached;
         ID2D1Bitmap? bmp = null;
-        string? path = SnapStore.PathIfExists(appKey);
+        var path = SnapStore.PathIfExists(appKey);
         if (path != null) bmp = LoadD2D(path);
         _snapCache[appKey] = bmp;
         return bmp;
@@ -310,14 +318,14 @@ internal sealed class CaptureManager : IDisposable
 
     public void PauseAll()
     {
-        if (WindowCapture.BorderRemovable) return;
+        if (WindowCapture._borderRemovable) return;
         foreach (var cap in _caps.Values) cap.Pause();
         _wallpaper?.Pause();
     }
 
     public void ResumeAll()
     {
-        if (WindowCapture.BorderRemovable) return;
+        if (WindowCapture._borderRemovable) return;
         foreach (var cap in _caps.Values) cap.Resume();
         _wallpaper?.Resume();
     }
@@ -339,7 +347,7 @@ internal sealed class CaptureManager : IDisposable
         // capture a minimized window), and it is what blocks the UI thread long enough to show the
         // busy cursor. The per-frame Update heal loop already rebuilds genuinely dead captures, so
         // here only the truly closed ones need a synchronous refresh. Win10 path is unchanged.
-        bool win11 = NativeMethods.IsWindows11;
+        var win11 = NativeMethods.IsWindows11;
         foreach (var cap in _caps.Values)
         {
             if (cap.IsClosed || (!win11 && !cap.HasContent)) cap.Refresh();
@@ -352,7 +360,7 @@ internal sealed class CaptureManager : IDisposable
     /// <summary>Diagnostic dump of every capture's state - for tracking down blank tiles.</summary>
     public void LogState(string when)
     {
-        Log.Write($"--- captures @ {when} (border-removable={WindowCapture.BorderRemovable}, win11={NativeMethods.IsWindows11}) ---");
+        Log.Write($"--- captures @ {when} (border-removable={WindowCapture._borderRemovable}, win11={NativeMethods.IsWindows11}) ---");
         foreach (var (h, cap) in _caps)
         {
             var sb = new System.Text.StringBuilder(80);

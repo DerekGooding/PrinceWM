@@ -1,4 +1,3 @@
-using PrinceWM.Helpers;
 using System.Drawing.Drawing2D;
 
 namespace PrinceWM.UI;
@@ -25,6 +24,6 @@ internal sealed class SwatchButton : Control
         var r = new Rectangle(0, 0, Width - 1, Height - 1);
         using var path = ModernUI.RoundedRect(r, 7);
         using (var brush = new SolidBrush(_color)) g.FillPath(brush, path);
-        using (var pen = new Pen(Color.FromArgb(90, 255, 255, 255), 1f)) g.DrawPath(pen, path);
+        using var pen = new Pen(Color.FromArgb(90, 255, 255, 255), 1f); g.DrawPath(pen, path);
     }
 }

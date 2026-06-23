@@ -19,19 +19,19 @@ internal static class Collision
     {
         if (!OverlapsAny(pos, size, obstacles, gap)) return pos;
 
-        float step = MathF.Max(24f, MathF.Min(size.X, size.Y) * 0.35f);
-        for (int ring = 1; ring <= 80; ring++)
+        var step = MathF.Max(24f, MathF.Min(size.X, size.Y) * 0.35f);
+        for (var ring = 1; ring <= 80; ring++)
         {
-            float rad = ring * step;
+            var rad = ring * step;
             Vector2 best = default;
-            float bestDist = float.MaxValue;
+            var bestDist = float.MaxValue;
 
-            for (int a = 0; a < 24; a++)
+            for (var a = 0; a < 24; a++)
             {
-                float ang = a / 24f * MathF.Tau;
-                Vector2 cand = pos + new Vector2(MathF.Cos(ang), MathF.Sin(ang)) * rad;
+                var ang = a / 24f * MathF.Tau;
+                var cand = pos + (new Vector2(MathF.Cos(ang), MathF.Sin(ang)) * rad);
                 if (OverlapsAny(cand, size, obstacles, gap)) continue;
-                float d = Vector2.DistanceSquared(cand, pos);
+                var d = Vector2.DistanceSquared(cand, pos);
                 if (d < bestDist) { bestDist = d; best = cand; }
             }
             if (bestDist < float.MaxValue) return best;

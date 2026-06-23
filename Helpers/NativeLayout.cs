@@ -8,13 +8,13 @@ internal static class NativeLayout
 
     public static void Apply(IReadOnlyList<WindowItem> items)
     {
-        int n = items.Count;
+        var n = items.Count;
         if (n == 0) return;
 
-        float totalArea = 0f;
+        var totalArea = 0f;
         foreach (var it in items)
             totalArea += (it.WorldSize.X + Gap) * (it.WorldSize.Y + Gap);
-        float targetRowWidth = MathF.Sqrt(totalArea) * 1.25f;
+        var targetRowWidth = MathF.Sqrt(totalArea) * 1.25f;
 
         float x = 0f, y = 0f, rowHeight = 0f;
 

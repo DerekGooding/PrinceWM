@@ -24,7 +24,7 @@ internal sealed class WindowCapture : IDisposable
     private SizeInt32 _poolSize;
     private bool _paused;
 
-    internal static bool BorderRemovable = true;
+    internal static bool _borderRemovable = true;
 
     private ID3D11Texture2D? _pending;
     private ID3D11Texture2D? _good;
@@ -49,8 +49,8 @@ internal sealed class WindowCapture : IDisposable
         get
         {
             if (!_hasGood) return 0f;
-            double sec = (Stopwatch.GetTimestamp() - _contentStart) / (double)Stopwatch.Frequency;
-            float u = (float)Math.Clamp(sec / 0.12, 0.0, 1.0);
+            var sec = (Stopwatch.GetTimestamp() - _contentStart) / (double)Stopwatch.Frequency;
+            var u = (float)Math.Clamp(sec / 0.12, 0.0, 1.0);
             return 1f - MathF.Pow(1f - u, 3f);
         }
     }
@@ -76,7 +76,7 @@ internal sealed class WindowCapture : IDisposable
 
         _rtDevice = rtDevice;
         _item = CaptureInterop.CreateItemForWindow(hwnd);
-        SizeInt32 size = _item.Size;
+        var size = _item.Size;
         if (size.Width <= 0) size.Width = 1;
         if (size.Height <= 0) size.Height = 1;
         _poolSize = size;
@@ -91,7 +91,7 @@ internal sealed class WindowCapture : IDisposable
             _rtDevice, DirectXPixelFormat.B8G8R8A8UIntNormalized, 2, _poolSize);
         _session = _pool.CreateCaptureSession(_item);
 
-        try { _session.IsBorderRequired = false; } catch { BorderRemovable = false; }
+        try { _session.IsBorderRequired = false; } catch { _borderRemovable = false; }
         try { _session.IsCursorCaptureEnabled = false; } catch { }
 
         _session.StartCapture();
@@ -168,7 +168,7 @@ internal sealed class WindowCapture : IDisposable
         Direct3D11CaptureFrame? latest = null;
         while (true)
         {
-            Direct3D11CaptureFrame? f = _pool.TryGetNextFrame();
+            var f = _pool.TryGetNextFrame();
             if (f == null) break;
             latest?.Dispose();
             latest = f;
@@ -182,13 +182,13 @@ internal sealed class WindowCapture : IDisposable
 
         using (latest)
         {
-            SizeInt32 content = latest.ContentSize;
-            IntPtr texPtr = CaptureInterop.GetTexturePointer(latest.Surface);
+            var content = latest.ContentSize;
+            var texPtr = CaptureInterop.GetTexturePointer(latest.Surface);
             using var src = new ID3D11Texture2D(texPtr);
-            Texture2DDescription sd = src.Description;
+            var sd = src.Description;
 
-            int cw = Math.Min(content.Width, (int)sd.Width);
-            int ch = Math.Min(content.Height, (int)sd.Height);
+            var cw = Math.Min(content.Width, (int)sd.Width);
+            var ch = Math.Min(content.Height, (int)sd.Height);
             if (cw > 0 && ch > 0)
             {
                 EnsureTextures(cw, ch, sd.Format);
@@ -210,8 +210,8 @@ internal sealed class WindowCapture : IDisposable
     private void IssueProbe(int cw, int ch)
     {
         if (_probe == null || _pending == null) return;
-        int sx = Math.Clamp(cw / 2 - 4, 0, Math.Max(0, cw - 8));
-        int sy = Math.Clamp(ch / 2 - 4, 0, Math.Max(0, ch - 8));
+        var sx = Math.Clamp((cw / 2) - 4, 0, Math.Max(0, cw - 8));
+        var sy = Math.Clamp((ch / 2) - 4, 0, Math.Max(0, ch - 8));
         int w = Math.Min(8, cw), h = Math.Min(8, ch);
         var box = new Vortice.Mathematics.Box(sx, sy, 0, sx + w, sy + h, 1);
         _ctx.CopySubresourceRegion(_probe, 0, 0, 0, 0, _pending, 0, box);
@@ -221,19 +221,19 @@ internal sealed class WindowCapture : IDisposable
     private bool ReadProbeBlack()
     {
         if (_probe == null) return false;
-        MappedSubresource map = _ctx.Map(_probe, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
+        var map = _ctx.Map(_probe, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
         try
         {
             long sum = 0;
-            for (int y = 0; y < 8; y++)
+            for (var y = 0; y < 8; y++)
             {
-                IntPtr row = map.DataPointer + y * (int)map.RowPitch;
-                for (int x = 0; x < 8; x++)
+                var row = map.DataPointer + (y * (int)map.RowPitch);
+                for (var x = 0; x < 8; x++)
                 {
-                    byte b = Marshal.ReadByte(row, x * 4 + 0);
-                    byte g = Marshal.ReadByte(row, x * 4 + 1);
-                    byte r = Marshal.ReadByte(row, x * 4 + 2);
-                    sum += (int)(0.299f * r + 0.587f * g + 0.114f * b);
+                    var b = Marshal.ReadByte(row, (x * 4) + 0);
+                    var g = Marshal.ReadByte(row, (x * 4) + 1);
+                    var r = Marshal.ReadByte(row, (x * 4) + 2);
+                    sum += (int)((0.299f * r) + (0.587f * g) + (0.114f * b));
                 }
             }
             return sum / 64.0 < 6.0;
@@ -249,7 +249,9 @@ internal sealed class WindowCapture : IDisposable
         if (_pending != null &&
             _pending.Description.Width == (uint)width &&
             _pending.Description.Height == (uint)height)
+        {
             return;
+        }
 
         _goodBitmap?.Dispose(); _goodBitmap = null;
         _pending?.Dispose(); _pending = null;
@@ -319,10 +321,10 @@ internal sealed class WindowCapture : IDisposable
                 try
                 {
                     var row = new byte[w * 4];
-                    for (int y = 0; y < h; y++)
+                    for (var y = 0; y < h; y++)
                     {
-                        Marshal.Copy(map.DataPointer + y * (int)map.RowPitch, row, 0, w * 4);
-                        Marshal.Copy(row, 0, bd.Scan0 + y * bd.Stride, w * 4);
+                        Marshal.Copy(map.DataPointer + (y * (int)map.RowPitch), row, 0, w * 4);
+                        Marshal.Copy(row, 0, bd.Scan0 + (y * bd.Stride), w * 4);
                     }
                 }
                 finally { bmp.UnlockBits(bd); }

@@ -12,7 +12,7 @@ internal static class AutoStart
     {
         if (enabled)
         {
-            string exe = Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule!.FileName!;
+            var exe = Environment.ProcessPath ?? Environment.ProcessPath!;
             Run($"/Create /TN \"{TaskName}\" /TR \"\\\"{exe}\\\"\" /SC ONLOGON /RL HIGHEST /F");
         }
         else

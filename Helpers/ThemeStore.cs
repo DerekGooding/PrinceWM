@@ -4,17 +4,17 @@ namespace PrinceWM.Helpers;
 
 internal static class ThemeStore
 {
-    private static readonly string Dir =
+    private static readonly string _dir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM");
 
-    private static readonly string FilePath = Path.Combine(Dir, "theme.json");
+    private static readonly string _filePath = Path.Combine(_dir, "theme.json");
 
     public static Theme Load()
     {
         try
         {
-            if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<Theme>(File.ReadAllText(FilePath)) ?? new Theme();
+            if (File.Exists(_filePath))
+                return JsonSerializer.Deserialize<Theme>(File.ReadAllText(_filePath)) ?? new Theme();
         }
         catch (Exception ex)
         {
@@ -27,8 +27,8 @@ internal static class ThemeStore
     {
         try
         {
-            Directory.CreateDirectory(Dir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(theme));
+            Directory.CreateDirectory(_dir);
+            File.WriteAllText(_filePath, JsonSerializer.Serialize(theme));
         }
         catch (Exception ex)
         {

@@ -1,15 +1,12 @@
-using PrinceWM.Helpers;
 using System.Drawing.Imaging;
 using DcAlphaMode = Vortice.DCommon.AlphaMode;
 
 namespace PrinceWM.Services;
 
-internal sealed class IconCache : IDisposable
+internal sealed class IconCache(ID2D1DeviceContext d2d) : IDisposable
 {
-    private readonly ID2D1DeviceContext _d2d;
+    private readonly ID2D1DeviceContext _d2d = d2d;
     private readonly Dictionary<string, ID2D1Bitmap?> _icons = new(StringComparer.Ordinal);
-
-    public IconCache(ID2D1DeviceContext d2d) => _d2d = d2d;
 
     public ID2D1Bitmap? Get(WindowItem it)
     {
@@ -22,7 +19,7 @@ internal sealed class IconCache : IDisposable
 
     private ID2D1Bitmap? Extract(IntPtr hwnd)
     {
-        IntPtr hicon = NativeMethods.GetWindowIconHandle(hwnd);
+        var hicon = NativeMethods.GetWindowIconHandle(hwnd);
         if (hicon == IntPtr.Zero) return null;
 
         using var icon = Icon.FromHandle(hicon);

@@ -46,9 +46,9 @@ internal sealed class Theme
 
     public static Color4 ToColor4(int rgb, float alpha = 1f)
     {
-        float r = ((rgb >> 16) & 0xFF) / 255f;
-        float g = ((rgb >> 8) & 0xFF) / 255f;
-        float b = (rgb & 0xFF) / 255f;
+        var r = ((rgb >> 16) & 0xFF) / 255f;
+        var g = ((rgb >> 8) & 0xFF) / 255f;
+        var b = (rgb & 0xFF) / 255f;
         return new Color4(r, g, b, alpha);
     }
 

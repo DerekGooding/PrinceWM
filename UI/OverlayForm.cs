@@ -1,4 +1,3 @@
-using PrinceWM.Services;
 using System.Diagnostics;
 using System.Numerics;
 
@@ -12,10 +11,10 @@ internal sealed class OverlayForm : Form
     private CaptureManager? _captures;
     private readonly NotifyIcon _tray;
 
-    private static readonly Theme AppTheme = ThemeStore.Load();
+    private static readonly Theme _appTheme = ThemeStore.Load();
     private SettingsForm? _settings;
 
-    private List<WindowItem> _items = new();
+    private List<WindowItem> _items = [];
     private int _selected = -1;
 
     private readonly Stopwatch _clock = Stopwatch.StartNew();
@@ -53,7 +52,7 @@ internal sealed class OverlayForm : Form
     private string? _drillApp;
     private bool Drilled => _drillApp != null;
 
-    private readonly HashSet<IntPtr> _promoted = new();
+    private readonly HashSet<IntPtr> _promoted = [];
 
     private int _quickIndex = -1;
 
@@ -65,7 +64,7 @@ internal sealed class OverlayForm : Form
     private bool _erasing;
     private bool _drawPanning;
     private int _drawSizeIdx = 1;
-    private static readonly float[] DrawSizes = { 2f, 4f, 8f, 16f, 28f };
+    private static readonly float[] _drawSizes = [2f, 4f, 8f, 16f, 28f];
 
     private readonly List<Pin> _pins = PinStore.Load();
     private int _hoverPin = -1;
@@ -83,18 +82,18 @@ internal sealed class OverlayForm : Form
     private string? _wsLabelDrag;
     private Vector2 _wsLabelDragLast;
     private bool _wsLabelDragged;
-    private readonly List<GhostTile> _ghosts = new();
+    private readonly List<GhostTile> _ghosts = [];
 
-    private static readonly int[] WsPalette =
-    {
+    private static readonly int[] _wsPalette =
+    [
         Theme.Rgb(135, 139, 146), Theme.Rgb(120, 170, 225), Theme.Rgb(150, 190, 130),
         Theme.Rgb(210, 160, 120), Theme.Rgb(185, 140, 200), Theme.Rgb(210, 180, 110),
-    };
+    ];
 
-    private static readonly Dictionary<string, Vector2> SavedPositions = LayoutStore.Load();
-    private static readonly Dictionary<string, Vector2> SavedSizes = SizeStore.Load();
+    private static readonly Dictionary<string, Vector2> _savedPositions = LayoutStore.Load();
+    private static readonly Dictionary<string, Vector2> _savedSizes = SizeStore.Load();
 
-    private static readonly List<IntPtr> Mru = new();
+    private static readonly List<IntPtr> _mru = [];
     private readonly NativeMethods.WinEventDelegate _foreProc;
     private IntPtr _foreHook;
 
@@ -103,7 +102,7 @@ internal sealed class OverlayForm : Form
     {
         if (idObject != NativeMethods.OBJID_WINDOW || hwnd == IntPtr.Zero) return;
         if (_open) return;
-        IntPtr root = NativeMethods.GetAncestor(hwnd, NativeMethods.GA_ROOT);
+        var root = NativeMethods.GetAncestor(hwnd, NativeMethods.GA_ROOT);
         if (root == IntPtr.Zero) return;
         BumpMru(root);
 
@@ -120,7 +119,7 @@ internal sealed class OverlayForm : Form
         }
     }
 
-    private System.Windows.Forms.Timer _focusTimer = null!;
+    private readonly System.Windows.Forms.Timer _focusTimer = null!;
     private IntPtr _focusHwnd;
     private int _focusTicks;
 
@@ -131,7 +130,7 @@ internal sealed class OverlayForm : Form
             _focusTimer.Stop();
             return;
         }
-        bool done = _captures.FocusSnapshotStep(_focusHwnd);
+        var done = _captures.FocusSnapshotStep(_focusHwnd);
         if (done || ++_focusTicks >= 14) // ~1.1s budget to land a good frame
         {
             _focusTimer.Stop();
@@ -157,14 +156,14 @@ internal sealed class OverlayForm : Form
         if (appIcon != null) Icon = appIcon;
 
         _draw.Strokes = _strokes;
-        _draw.Size = DrawSizes[_drawSizeIdx];
+        _draw.Size = _drawSizes[_drawSizeIdx];
 
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.Opaque | ControlStyles.UserPaint, true);
         UpdateStyles();
 
         Application.Idle += OnIdle;
 
-        _hook = new AltTabHook { SummonMods = AppTheme.SummonMods, SummonKey = AppTheme.SummonKey };
+        _hook = new AltTabHook { SummonMods = _appTheme.SummonMods, SummonKey = _appTheme.SummonKey };
         ApplyHotkeys();
 
         _hook.AltTabPressed += shift => PostToUi(() => OnAltTab(shift));
@@ -206,7 +205,7 @@ internal sealed class OverlayForm : Form
 
     private async Task CheckForUpdatesAsync()
     {
-        string? tag = await UpdateChecker.GetNewerTagAsync();
+        var tag = await UpdateChecker.GetNewerTagAsync();
         if (tag == null) return;
 
         var page = new TaskDialogPage
@@ -241,7 +240,7 @@ internal sealed class OverlayForm : Form
     {
         try
         {
-            string? path = Environment.ProcessPath;
+            var path = Environment.ProcessPath;
             return path != null ? Icon.ExtractAssociatedIcon(path) : null;
         }
         catch { return null; }
@@ -266,37 +265,36 @@ internal sealed class OverlayForm : Form
 
     private void EnsureRenderer()
     {
-        if (_renderer == null)
-        {
-            _renderer = new Renderer(Handle, ClientSize.Width, ClientSize.Height, AppTheme);
-            _renderer.ContentFadeProvider = h => _captures?.GetContentFade(h) ?? 1f;
-            _renderer.IconProvider = it => _captures?.GetIcon(it);
-            _renderer.SnapshotProvider = it => _captures?.GetSnapshot(it.AppKey);
-        }
+        _renderer ??= new Renderer(Handle, ClientSize.Width, ClientSize.Height, _appTheme)
+            {
+                ContentFadeProvider = h => _captures?.GetContentFade(h) ?? 1f,
+                IconProvider = it => _captures?.GetIcon(it),
+                SnapshotProvider = it => _captures?.GetSnapshot(it.AppKey)
+            };
         _bitmapProvider ??= h => _captures?.GetBitmap(h);
     }
 
-    private readonly HashSet<IntPtr> _closed = new();
+    private readonly HashSet<IntPtr> _closed = [];
 
     private float _rescanT;
     private float _captureT;
     private float _warmup;
-    private HashSet<IntPtr> _lastScanHwnds = new();
+    private HashSet<IntPtr> _lastScanHwnds = [];
 
-    private List<WindowItem> _allWindows = new();
+    private List<WindowItem> _allWindows = [];
 
     private static int MruRank(IntPtr h)
     {
-        int i = Mru.IndexOf(h);
+        var i = _mru.IndexOf(h);
         return i < 0 ? int.MaxValue : i;
     }
 
     private void BuildItems()
     {
-        var raw = WindowScanner.Scan(Handle, sizeCache: SavedSizes);
+        var raw = WindowScanner.Scan(Handle, sizeCache: _savedSizes);
         if (_closed.Count > 0) raw.RemoveAll(it => _closed.Contains(it.Hwnd));
-        _lastScanHwnds = raw.Select(r => r.Hwnd).ToHashSet();
-        _allWindows = new List<WindowItem>(raw);
+        _lastScanHwnds = [.. raw.Select(r => r.Hwnd)];
+        _allWindows = [.. raw];
 
         if (_drillApp != null)
         {
@@ -312,24 +310,24 @@ internal sealed class OverlayForm : Form
             _drillApp = null;
         }
 
-        _items = Grouper.Stack(raw, Mru, _promoted);
-        LayoutManager.Arrange(_items, SavedPositions, PinBoxes(null));
+        _items = Grouper.Stack(raw, _mru, _promoted);
+        LayoutManager.Arrange(_items, _savedPositions, PinBoxes(null));
 
         var scanRank = new Dictionary<IntPtr, int>(raw.Count);
-        for (int i = 0; i < raw.Count; i++) scanRank[raw[i].Hwnd] = i;
+        for (var i = 0; i < raw.Count; i++) scanRank[raw[i].Hwnd] = i;
         int Rank(WindowItem it)
         {
             int mru = int.MaxValue, scan = int.MaxValue;
             foreach (var h in it.StackHwnds)
             {
-                int m = Mru.IndexOf(h);
+                var m = _mru.IndexOf(h);
                 if (m >= 0 && m < mru) mru = m;
-                int s = scanRank.GetValueOrDefault(h, int.MaxValue);
+                var s = scanRank.GetValueOrDefault(h, int.MaxValue);
                 if (s < scan) scan = s;
             }
-            return mru != int.MaxValue ? mru : Mru.Count + scan;
+            return mru != int.MaxValue ? mru : _mru.Count + scan;
         }
-        _items = _items.OrderBy(Rank).ToList();
+        _items = [.. _items.OrderBy(Rank)];
         SyncWorkspaces();
     }
 
@@ -350,30 +348,30 @@ internal sealed class OverlayForm : Form
 
     private static void ArrangeGrid(List<WindowItem> items, Vector2 center)
     {
-        int n = items.Count;
+        var n = items.Count;
         if (n == 0) return;
 
         float cw = 0, ch = 0;
         foreach (var it in items) { cw = MathF.Max(cw, it.WorldSize.X); ch = MathF.Max(ch, it.WorldSize.Y); }
-        float gap = LayoutManager.Gap;
-        int cols = (int)MathF.Ceiling(MathF.Sqrt(n));
-        int rows = (int)MathF.Ceiling(n / (float)cols);
-        float totalH = rows * ch + (rows - 1) * gap;
-        float y0 = center.Y - totalH * 0.5f;
+        var gap = LayoutManager.Gap;
+        var cols = (int)MathF.Ceiling(MathF.Sqrt(n));
+        var rows = (int)MathF.Ceiling(n / (float)cols);
+        var totalH = (rows * ch) + ((rows - 1) * gap);
+        var y0 = center.Y - (totalH * 0.5f);
 
-        int idx = 0;
-        for (int r = 0; r < rows && idx < n; r++)
+        var idx = 0;
+        for (var r = 0; r < rows && idx < n; r++)
         {
-            int inRow = Math.Min(cols, n - idx);
-            float totalW = inRow * cw + (inRow - 1) * gap;
-            float x0 = center.X - totalW * 0.5f;
-            float cellTop = y0 + r * (ch + gap);
-            for (int c = 0; c < inRow; c++)
+            var inRow = Math.Min(cols, n - idx);
+            var totalW = (inRow * cw) + ((inRow - 1) * gap);
+            var x0 = center.X - (totalW * 0.5f);
+            var cellTop = y0 + (r * (ch + gap));
+            for (var c = 0; c < inRow; c++)
             {
                 var it = items[idx++];
-                float cellCx = x0 + c * (cw + gap) + cw * 0.5f;
-                float cellCy = cellTop + ch * 0.5f;
-                it.WorldPos = new Vector2(cellCx - it.WorldSize.X * 0.5f, cellCy - it.WorldSize.Y * 0.5f);
+                var cellCx = x0 + (c * (cw + gap)) + (cw * 0.5f);
+                var cellCy = cellTop + (ch * 0.5f);
+                it.WorldPos = new Vector2(cellCx - (it.WorldSize.X * 0.5f), cellCy - (it.WorldSize.Y * 0.5f));
             }
         }
     }
@@ -400,8 +398,8 @@ internal sealed class OverlayForm : Form
         if (_items.Count > 0)
         {
             _camera.FitAll(_items, animate: false);
-            Vector2 fitCenter = _camera.Center;
-            float fitZoom = _camera.Zoom;
+            var fitCenter = _camera.Center;
+            var fitZoom = _camera.Zoom;
             _camera.SnapTo(_drillReturnCenter, _drillReturnZoom);
             _camera.TweenTo(fitCenter, fitZoom, 0.44f, easeOut: true);
             _opening = true;
@@ -420,7 +418,7 @@ internal sealed class OverlayForm : Form
     {
         _drillApp = null;
 
-        foreach (var it in _items) SavedPositions.Remove(it.AppKey);
+        foreach (var it in _items) _savedPositions.Remove(it.AppKey);
         BuildItems();
         _captures?.Sync(_allWindows);
         _selected = _items.Count > 0 ? 0 : -1;
@@ -437,14 +435,14 @@ internal sealed class OverlayForm : Form
             if (!Clipboard.ContainsImage()) return;
             using var img = Clipboard.GetImage();
             if (img == null) return;
-            string? file = PinStore.SaveImage(img);
+            var file = PinStore.SaveImage(img);
             if (file == null) return;
 
             float w = img.Width, h = img.Height;
-            float scale = MathF.Min(1f, 520f / MathF.Max(w, h));
+            var scale = MathF.Min(1f, 520f / MathF.Max(w, h));
             w *= scale; h *= scale;
-            Vector2 wp = _camera.ScreenToWorld(new Vector2(screen.X, screen.Y));
-            var p0 = Collision.Resolve(new Vector2(wp.X - w * 0.5f, wp.Y - h * 0.5f), new Vector2(w, h), Obstacles(null), 10f);
+            var wp = _camera.ScreenToWorld(new Vector2(screen.X, screen.Y));
+            var p0 = Collision.Resolve(new Vector2(wp.X - (w * 0.5f), wp.Y - (h * 0.5f)), new Vector2(w, h), Obstacles(null), 10f);
             _pins.Add(new Pin { Kind = PinKind.Image, ImageFile = file, X = p0.X, Y = p0.Y, W = w, H = h });
             PinStore.Save(_pins);
         }
@@ -453,9 +451,9 @@ internal sealed class OverlayForm : Form
 
     private void NewNoteAt(Point screen)
     {
-        float w = 240f, h = 180f;
-        Vector2 wp = _camera.ScreenToWorld(new Vector2(screen.X, screen.Y));
-        var p0 = Collision.Resolve(new Vector2(wp.X - w * 0.5f, wp.Y - h * 0.5f), new Vector2(w, h), Obstacles(null), 10f);
+        const float w = 240f, h = 180f;
+        var wp = _camera.ScreenToWorld(new Vector2(screen.X, screen.Y));
+        var p0 = Collision.Resolve(new Vector2(wp.X - (w * 0.5f), wp.Y - (h * 0.5f)), new Vector2(w, h), Obstacles(null), 10f);
         var note = new Pin { Kind = PinKind.Note, X = p0.X, Y = p0.Y, W = w, H = h };
         _pins.Add(note);
         _editingPin = note;
@@ -472,12 +470,16 @@ internal sealed class OverlayForm : Form
 
     private void UpdateButtonHover(Point p)
     {
-        if (!AppTheme.ShowPaintButton) { _draw.HoverToggle = false; _draw.HoverButton = -1; return; }
-        _draw.HoverToggle = _renderer != null && _renderer.DrawToggleRect.Contains(p);
+        if (!_appTheme.ShowPaintButton) { _draw.HoverToggle = false; _draw.HoverButton = -1; return; }
+        _draw.HoverToggle = _renderer?.DrawToggleRect.Contains(p) == true;
         _draw.HoverButton = -1;
         if (_draw.Active && _renderer != null)
-            for (int i = 0; i < Renderer.ToolButtonCount; i++)
+        {
+            for (var i = 0; i < Renderer.ToolButtonCount; i++)
+            {
                 if (_renderer.ToolButtonRect(i).Contains(p)) { _draw.HoverButton = i; break; }
+            }
+        }
     }
 
     private void ToolbarClick(int i)
@@ -490,8 +492,8 @@ internal sealed class OverlayForm : Form
             return;
         }
 
-        _drawSizeIdx = (_drawSizeIdx + 1) % DrawSizes.Length;
-        _draw.Size = DrawSizes[_drawSizeIdx];
+        _drawSizeIdx = (_drawSizeIdx + 1) % _drawSizes.Length;
+        _draw.Size = _drawSizes[_drawSizeIdx];
     }
 
     private Stroke NewStroke()
@@ -509,13 +511,17 @@ internal sealed class OverlayForm : Form
     private void HandleDrawDown(MouseEventArgs e)
     {
         if (e.Button == MouseButtons.Left && _renderer != null)
-            for (int i = 0; i < Renderer.ToolButtonCount; i++)
+        {
+            for (var i = 0; i < Renderer.ToolButtonCount; i++)
+            {
                 if (_renderer.ToolButtonRect(i).Contains(e.Location)) { ToolbarClick(i); return; }
+            }
+        }
 
         if (e.Button == MouseButtons.Right) { _drawPanning = true; _lastMouse = e.Location; return; }
         if (e.Button != MouseButtons.Left) return;
 
-        Vector2 wp = _camera.ScreenToWorld(new Vector2(e.X, e.Y));
+        var wp = _camera.ScreenToWorld(new Vector2(e.X, e.Y));
         switch (_draw.Tool)
         {
             case DrawTool.Fill: FillAt(wp); break;
@@ -537,13 +543,20 @@ internal sealed class OverlayForm : Form
             _lastMouse = e.Location;
             return;
         }
-        Vector2 wp = _camera.ScreenToWorld(new Vector2(e.X, e.Y));
+        var wp = _camera.ScreenToWorld(new Vector2(e.X, e.Y));
         if (_drawing != null)
         {
-            if (_drawing.Kind == StrokeKind.Free) _drawing.Add(wp);
+            if (_drawing.Kind == StrokeKind.Free)
+            {
+                _drawing.Add(wp);
+            }
             else { _drawing.Pts[2] = wp.X; _drawing.Pts[3] = wp.Y; }
         }
-        else if (_erasing) EraseAt(wp);
+        else if (_erasing)
+        {
+            EraseAt(wp);
+        }
+
         _lastMouse = e.Location;
     }
 
@@ -553,21 +566,21 @@ internal sealed class OverlayForm : Form
         if (_erasing) { _erasing = false; DrawStore.Save(_strokes); return; }
         if (_drawing == null) return;
 
-        Stroke s = _drawing; _drawing = null;
+        var s = _drawing; _drawing = null;
         var (_, _, w, h) = s.Bounds();
-        bool keep = s.Kind == StrokeKind.Free ? s.Count >= 2 : (w > 2f || h > 2f);
+        var keep = s.Kind == StrokeKind.Free ? s.Count >= 2 : (w > 2f || h > 2f);
         if (keep) { _strokes.Add(s); DrawStore.Save(_strokes); }
     }
 
     private void FillAt(Vector2 wp)
     {
-        for (int i = _strokes.Count - 1; i >= 0; i--)
+        for (var i = _strokes.Count - 1; i >= 0; i--)
             if (_strokes[i].EnclosesPoint(wp)) { _strokes[i].Fill = _draw.Color; DrawStore.Save(_strokes); return; }
     }
 
     private void EraseAt(Vector2 wp)
     {
-        float r = MathF.Max(10f, _draw.Size * 2.5f) / MathF.Max(_camera.Zoom, 0.001f);
+        var r = MathF.Max(10f, _draw.Size * 2.5f) / MathF.Max(_camera.Zoom, 0.001f);
         _strokes.RemoveAll(s => StrokeNear(s, wp, r));
     }
 
@@ -575,7 +588,7 @@ internal sealed class OverlayForm : Form
     {
         if (s.Kind is StrokeKind.Free or StrokeKind.Line)
         {
-            for (int i = 0; i < s.Count; i++)
+            for (var i = 0; i < s.Count; i++)
                 if (Vector2.Distance(s.At(i), p) < r) return true;
             return false;
         }
@@ -592,9 +605,9 @@ internal sealed class OverlayForm : Form
     {
         if (_renderer == null || note.Kind != PinKind.Note) return;
         const float pad = 12f;
-        string measured = note == _editingPin ? note.Text + "|" : note.Text;
-        float textH = _renderer.MeasureNoteTextHeight(measured, note.W - 2f * pad);
-        float needed = textH + 2f * pad;
+        var measured = note == _editingPin ? note.Text + "|" : note.Text;
+        var textH = _renderer.MeasureNoteTextHeight(measured, note.W - (2f * pad));
+        var needed = textH + (2f * pad);
         if (needed > note.H) note.H = needed;
     }
 
@@ -630,7 +643,7 @@ internal sealed class OverlayForm : Form
         };
         menu.Items.Add("Add note here", null, (_, _) => NewNoteAt(p));
         var paste = (ToolStripMenuItem)menu.Items.Add("Paste image here", null, (_, _) => PasteAt(p));
-        bool hasImg = false;
+        var hasImg = false;
         try { hasImg = Clipboard.ContainsImage(); } catch { }
         paste.Enabled = hasImg;
         menu.Show(this, p);
@@ -664,7 +677,7 @@ internal sealed class OverlayForm : Form
             if (ws == null) continue;
             if (!ws.Info.TryGetValue(it.AppKey, out var gi)) { gi = new GhostInfo(); ws.Info[it.AppKey] = gi; }
             gi.Title = it.Title;
-            string exe = NativeMethods.ProcessPath(it.Hwnd);
+            var exe = NativeMethods.ProcessPath(it.Hwnd);
             if (!string.IsNullOrEmpty(exe)) gi.Exe = exe;
             gi.X = it.WorldPos.X; gi.Y = it.WorldPos.Y; gi.W = it.WorldSize.X; gi.H = it.WorldSize.Y;
         }
@@ -687,8 +700,8 @@ internal sealed class OverlayForm : Form
 
     private GhostTile? GhostHit(Point screen)
     {
-        Vector2 w = _camera.ScreenToWorld(new Vector2(screen.X, screen.Y));
-        for (int i = _ghosts.Count - 1; i >= 0; i--)
+        var w = _camera.ScreenToWorld(new Vector2(screen.X, screen.Y));
+        for (var i = _ghosts.Count - 1; i >= 0; i--)
             if (_ghosts[i].Contains(w)) return _ghosts[i];
         return null;
     }
@@ -706,7 +719,7 @@ internal sealed class OverlayForm : Form
 
     private Workspace? WorkspaceOf(string appKey) => _workspaces.Find(w => w.Has(appKey));
 
-    private int NextTint() => WsPalette[_workspaces.Count % WsPalette.Length];
+    private int NextTint() => _wsPalette[_workspaces.Count % _wsPalette.Length];
 
     private Workspace NewWorkspaceFrom(string appKey)
     {
@@ -724,7 +737,11 @@ internal sealed class OverlayForm : Form
         var wb = WorkspaceOf(b);
         Workspace ws;
         if (wa != null && wb != null && wa != wb) { MergeWorkspaces(wa, wb); ws = wa; }
-        else ws = wa ?? wb ?? NewWorkspaceFrom(a);
+        else
+        {
+            ws = wa ?? wb ?? NewWorkspaceFrom(a);
+        }
+
         ws.Connect(a, b);
         SaveWorkspaces();
     }
@@ -747,7 +764,7 @@ internal sealed class OverlayForm : Form
 
     private void AddWorkspaceMenu(ContextMenuStrip menu, WindowItem it)
     {
-        string key = it.AppKey;
+        var key = it.AppKey;
         var mine = WorkspaceOf(key);
         menu.Items.Add(new ToolStripSeparator());
 
@@ -783,7 +800,7 @@ internal sealed class OverlayForm : Form
 
     private void RenameWorkspace(Workspace ws)
     {
-        string? name = PromptText("Rename workspace", ws.Name);
+        var name = PromptText("Rename workspace", ws.Name);
         if (!string.IsNullOrWhiteSpace(name)) { ws.Name = name.Trim(); SaveWorkspaces(); }
     }
 
@@ -808,7 +825,7 @@ internal sealed class OverlayForm : Form
     {
         if (_renderer == null) return null;
         var rects = _renderer.WorkspaceLabelRects;
-        for (int i = rects.Count - 1; i >= 0; i--)
+        for (var i = rects.Count - 1; i >= 0; i--)
             if (rects[i].rect.Contains(p.X, p.Y))
                 return _workspaces.Find(w => w.Id == rects[i].id);
         return null;
@@ -859,10 +876,10 @@ internal sealed class OverlayForm : Form
     {
         _hoverPin = -1;
         _hoverPinClose = false;
-        for (int i = _pins.Count - 1; i >= 0; i--)
+        for (var i = _pins.Count - 1; i >= 0; i--)
         {
-            Vector2 tl = _camera.WorldToScreen(_pins[i].Pos);
-            Vector2 br = _camera.WorldToScreen(_pins[i].Pos + _pins[i].SizeV);
+            var tl = _camera.WorldToScreen(_pins[i].Pos);
+            var br = _camera.WorldToScreen(_pins[i].Pos + _pins[i].SizeV);
             var s = new RectangleF(tl.X, tl.Y, br.X - tl.X, br.Y - tl.Y);
             if (s.Width < 30f || s.Height < 24f) continue;
             var cr = Renderer.CloseButtonRect(s.X, s.Y, s.Width, s.Height);
@@ -873,7 +890,7 @@ internal sealed class OverlayForm : Form
 
     private void ExitDrill()
     {
-        string? was = _drillApp;
+        var was = _drillApp;
         _drillApp = null;
         _hoverIndex = -1;
         _hoverClose = false;
@@ -891,7 +908,7 @@ internal sealed class OverlayForm : Form
     private void RescanIfChanged()
     {
         if (_committing || _tileDrag >= 0) return;
-        var raw = WindowScanner.Scan(Handle, sizeCache: SavedSizes);
+        var raw = WindowScanner.Scan(Handle, sizeCache: _savedSizes);
         if (_closed.Count > 0) raw.RemoveAll(it => _closed.Contains(it.Hwnd));
         var now = raw.Select(r => r.Hwnd).ToHashSet();
         if (now.SetEquals(_lastScanHwnds)) return;
@@ -900,7 +917,7 @@ internal sealed class OverlayForm : Form
 
     private void RefreshItems()
     {
-        IntPtr selH = _selected >= 0 && _selected < _items.Count ? _items[_selected].Hwnd : IntPtr.Zero;
+        var selH = _selected >= 0 && _selected < _items.Count ? _items[_selected].Hwnd : IntPtr.Zero;
         BuildItems();
         _selected = selH != IntPtr.Zero
             ? _items.FindIndex(i => i.Hwnd == selH || i.StackHwnds.Contains(selH))
@@ -923,13 +940,13 @@ internal sealed class OverlayForm : Form
         _tintFade = 0f;
 
         _camera.Viewport = new Vector2(ClientSize.Width, ClientSize.Height);
-        bool zoomedOut = false;
+        var zoomedOut = false;
         _spawnFade = 1f;
         if (_spawnOpen && _items.Count > 0)
         {
             _camera.FitAll(_items, animate: false);
-            Vector2 fc = _camera.Center;
-            float fz = _camera.Zoom;
+            var fc = _camera.Center;
+            var fz = _camera.Zoom;
             _camera.SnapTo(fc, fz * 1.1f);
             _camera.TweenTo(fc, fz, 0.5f, easeOut: true);
             _selected = Math.Clamp(_quickIndex, 0, _items.Count - 1);
@@ -938,12 +955,12 @@ internal sealed class OverlayForm : Form
         }
         else if (_items.Count > 0)
         {
-            WindowItem here = _items[0];
+            var here = _items[0];
 
-            float targetZoom = AppTheme.RememberZoom && _savedZoom > 0.001f
+            var targetZoom = _appTheme.RememberZoom && _savedZoom > 0.001f
                 ? _savedZoom : _camera.FocusZoom(here);
 
-            if (TryFramePerfect(here, out Vector2 c, out float z))
+            if (TryFramePerfect(here, out var c, out var z))
             {
                 _camera.SnapTo(c, z);
                 // Tab-out zooms away from a 1:1 view, so a quintic easeOut (5x initial velocity)
@@ -973,7 +990,7 @@ internal sealed class OverlayForm : Form
 
         if (CaptureManager.IsSupported)
         {
-            _captures ??= new CaptureManager(_renderer.D3DDevice, _renderer.D3DContext, _renderer.D2D);
+            _captures ??= new CaptureManager(_renderer.D3DDevice!, _renderer.D3DContext, _renderer.D2D);
             _captures.Sync(_allWindows);
             _captures.RefreshAll();
             _captures.ResetHeal();
@@ -1006,14 +1023,14 @@ internal sealed class OverlayForm : Form
 
     private void StealForeground()
     {
-        IntPtr prevFg = NativeMethods.GetForegroundWindow();
-        uint prevThread = NativeMethods.GetWindowThreadProcessId(prevFg, out _);
-        uint myThread = NativeMethods.GetCurrentThreadId();
+        var prevFg = NativeMethods.GetForegroundWindow();
+        var prevThread = NativeMethods.GetWindowThreadProcessId(prevFg, out _);
+        var myThread = NativeMethods.GetCurrentThreadId();
         uint prevTimeout = 0;
-        bool gotTimeout = NativeMethods.SystemParametersInfoGet(NativeMethods.SPI_GETFOREGROUNDLOCKTIMEOUT, 0, ref prevTimeout, 0);
+        var gotTimeout = NativeMethods.SystemParametersInfoGet(NativeMethods.SPI_GETFOREGROUNDLOCKTIMEOUT, 0, ref prevTimeout, 0);
         NativeMethods.SystemParametersInfoSet(NativeMethods.SPI_SETFOREGROUNDLOCKTIMEOUT, 0, IntPtr.Zero, 0);
 
-        bool attached = prevThread != myThread && prevFg != IntPtr.Zero &&
+        var attached = prevThread != myThread && prevFg != IntPtr.Zero &&
                         NativeMethods.AttachThreadInput(myThread, prevThread, true);
         NativeMethods.BringWindowToTop(Handle);
         NativeMethods.SetForegroundWindow(Handle);
@@ -1025,12 +1042,12 @@ internal sealed class OverlayForm : Form
 
     private static bool IsFullscreenWindow(IntPtr hwnd)
     {
-        if (!NativeMethods.GetWindowRect(hwnd, out NativeMethods.RECT r)) return false;
-        IntPtr mon = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
+        if (!NativeMethods.GetWindowRect(hwnd, out var r)) return false;
+        var mon = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
         if (mon == IntPtr.Zero) return false;
         var mi = new NativeMethods.MONITORINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.MONITORINFO>() };
         if (!NativeMethods.GetMonitorInfo(mon, ref mi)) return false;
-        NativeMethods.RECT m = mi.rcMonitor;
+        var m = mi.rcMonitor;
         return r.Left <= m.Left + 2 && r.Top <= m.Top + 2 &&
                r.Right >= m.Right - 2 && r.Bottom >= m.Bottom - 2;
     }
@@ -1041,8 +1058,8 @@ internal sealed class OverlayForm : Form
     // Escape just pops their pause menu and the wait loop burns ~190ms for nothing. Gate on class.
     private static bool NeedsEscape(IntPtr hwnd)
     {
-        string cls = NativeMethods.WindowClass(hwnd);
-        return cls == "ApplicationFrameWindow" || cls == "Windows.UI.Core.CoreWindow";
+        var cls = NativeMethods.WindowClass(hwnd);
+        return cls is "ApplicationFrameWindow" or "Windows.UI.Core.CoreWindow";
     }
 
     private static void SendCleanEscape()
@@ -1056,16 +1073,16 @@ internal sealed class OverlayForm : Form
     private static void BumpMru(IntPtr hwnd)
     {
         if (hwnd == IntPtr.Zero) return;
-        Mru.Remove(hwnd);
-        Mru.Insert(0, hwnd);
-        if (Mru.Count > 64) Mru.RemoveRange(64, Mru.Count - 64);
+        _mru.Remove(hwnd);
+        _mru.Insert(0, hwnd);
+        if (_mru.Count > 64) _mru.RemoveRange(64, _mru.Count - 64);
     }
 
     private void CloseOverlay(bool activateSelection)
     {
         _savedZoom = _camera.Zoom;
-        int idx = activateSelection ? _selected : -1;
-        IntPtr hwnd = idx >= 0 && idx < _items.Count ? _items[idx].Hwnd : IntPtr.Zero;
+        var idx = activateSelection ? _selected : -1;
+        var hwnd = idx >= 0 && idx < _items.Count ? _items[idx].Hwnd : IntPtr.Zero;
 
         if (hwnd != IntPtr.Zero) { BumpMru(hwnd); WindowScanner.Activate(hwnd); }
         HideOverlay();
@@ -1079,8 +1096,8 @@ internal sealed class OverlayForm : Form
         _committing = true;
         _commitElapsed = 0f;
 
-        WindowItem it = _items[index];
-        if (TryFramePerfect(it, out Vector2 center, out float zoom))
+        var it = _items[index];
+        if (TryFramePerfect(it, out var center, out var zoom))
             _camera.TweenTo(center, zoom, CommitDuration, easeOut: true);
         else
             _camera.FocusFill(it, CommitDuration);
@@ -1100,22 +1117,25 @@ internal sealed class OverlayForm : Form
             wr = wp.rcNormalPosition;
         }
         else if (!NativeMethods.GetExtendedFrameBounds(it.Hwnd, out wr) &&
-                 !NativeMethods.GetWindowRect(it.Hwnd, out wr)) return false;
+                 !NativeMethods.GetWindowRect(it.Hwnd, out wr))
+        {
+            return false;
+        }
 
         if (wr.Width <= 0 || wr.Height <= 0 || wr.Left <= -30000 || wr.Top <= -30000) return false;
 
         float winW = wr.Width, winH = wr.Height;
         var winCenterClient = new Vector2(
-            (wr.Left - Bounds.X) + winW * 0.5f,
-            (wr.Top - Bounds.Y) + winH * 0.5f);
+            (wr.Left - Bounds.X) + (winW * 0.5f),
+            (wr.Top - Bounds.Y) + (winH * 0.5f));
         zoom = winW / Math.Max(1f, it.WorldSize.X);
-        center = it.WorldCenter - (winCenterClient - _camera.Viewport * 0.5f) / zoom;
+        center = it.WorldCenter - ((winCenterClient - (_camera.Viewport * 0.5f)) / zoom);
         return true;
     }
 
     private void FinalizeCommit()
     {
-        IntPtr hwnd = _selected >= 0 && _selected < _items.Count ? _items[_selected].Hwnd : IntPtr.Zero;
+        var hwnd = _selected >= 0 && _selected < _items.Count ? _items[_selected].Hwnd : IntPtr.Zero;
 
         if (hwnd != IntPtr.Zero) { BumpMru(hwnd); ActivateVerified(hwnd); }
         HideOverlay();
@@ -1123,35 +1143,35 @@ internal sealed class OverlayForm : Form
 
     private static void ActivateVerified(IntPtr hwnd)
     {
-        bool ok = WindowScanner.Activate(hwnd);
-        int tries = 0;
+        var ok = WindowScanner.Activate(hwnd);
+        var tries = 0;
         while (NativeMethods.GetForegroundWindow() != hwnd && tries < 4)
         {
             Thread.Sleep(8);
             ok = WindowScanner.Activate(hwnd);
             tries++;
         }
-        IntPtr fg = NativeMethods.GetForegroundWindow();
+        var fg = NativeMethods.GetForegroundWindow();
         if (fg != hwnd)
             Log.Write($"commit MISS target=0x{hwnd:X} sfw={ok} fg=0x{fg:X} tries={tries}");
     }
 
     private static void ApplyTunables()
     {
-        LayoutManager.Gap = Math.Clamp(AppTheme.TileGap, 8, 240);
-        Camera.DurationScale = 100f / Math.Clamp(AppTheme.AnimSpeed, 30, 300);
+        LayoutManager.Gap = Math.Clamp(_appTheme.TileGap, 8, 240);
+        Camera.DurationScale = 100f / Math.Clamp(_appTheme.AnimSpeed, 30, 300);
     }
 
     private void ApplyHotkeys()
     {
-        _hook.SummonMods = AppTheme.SummonMods;
-        _hook.SummonKey = AppTheme.SummonKey;
-        _hook.CommitKey = AppTheme.CommitKey;
-        _hook.CancelKey = AppTheme.CancelKey;
-        _hook.MoveUpKey = AppTheme.MoveUpKey;
-        _hook.MoveDownKey = AppTheme.MoveDownKey;
-        _hook.MoveLeftKey = AppTheme.MoveLeftKey;
-        _hook.MoveRightKey = AppTheme.MoveRightKey;
+        _hook.SummonMods = _appTheme.SummonMods;
+        _hook.SummonKey = _appTheme.SummonKey;
+        _hook.CommitKey = _appTheme.CommitKey;
+        _hook.CancelKey = _appTheme.CancelKey;
+        _hook.MoveUpKey = _appTheme.MoveUpKey;
+        _hook.MoveDownKey = _appTheme.MoveDownKey;
+        _hook.MoveLeftKey = _appTheme.MoveLeftKey;
+        _hook.MoveRightKey = _appTheme.MoveRightKey;
     }
 
     private void ApplySafeArea()
@@ -1168,9 +1188,9 @@ internal sealed class OverlayForm : Form
     {
         try
         {
-            NativeMethods.GetWindowThreadProcessId(weWindow, out uint pid);
+            NativeMethods.GetWindowThreadProcessId(weWindow, out var pid);
             using var p = Process.GetProcessById((int)pid);
-            string? exe = p.MainModule?.FileName;
+            var exe = p.MainModule?.FileName;
             if (string.IsNullOrEmpty(exe)) return;
             Process.Start(new ProcessStartInfo(exe, "-control play")
             {
@@ -1186,7 +1206,7 @@ internal sealed class OverlayForm : Form
     private void SetDesktopIconsHidden(bool hide)
     {
         if (hide == _iconsHidden) return;
-        IntPtr host = NativeMethods.GetDesktopIconHost();
+        var host = NativeMethods.GetDesktopIconHost();
         if (host == IntPtr.Zero) return;
         NativeMethods.ShowWindow(host, hide ? NativeMethods.SW_HIDE : NativeMethods.SW_SHOW);
         _iconsHidden = hide;
@@ -1198,7 +1218,7 @@ internal sealed class OverlayForm : Form
     private void SyncWallpaper(bool force = false)
     {
         if (_captures == null) return;
-        if (!AppTheme.UseWallpaper)
+        if (!_appTheme.UseWallpaper)
         {
             _captures.ClearWallpaper();
             _captures.ClearStaticWallpaper();
@@ -1206,7 +1226,7 @@ internal sealed class OverlayForm : Form
             return;
         }
 
-        bool win11 = NativeMethods.IsWindows11;
+        var win11 = NativeMethods.IsWindows11;
 
         // Fast path: the wallpaper setup almost never changes between opens, but the full sync reads
         // the registry, enumerates every top-level window, and spawns a wallpaper.exe control
@@ -1214,13 +1234,13 @@ internal sealed class OverlayForm : Form
         // valid, just re-assert the (cheap, early-returning) bitmap targets and skip all of that.
         if (!force && _wpInit && win11 && _wpAnimated != IntPtr.Zero && NativeMethods.IsWindow(_wpAnimated))
         {
-            IntPtr t = NativeMethods.GetAncestor(_wpAnimated, NativeMethods.GA_ROOT);
-            SetDesktopIconsHidden(!AppTheme.ShowDesktopIcons);
+            var t = NativeMethods.GetAncestor(_wpAnimated, NativeMethods.GA_ROOT);
+            SetDesktopIconsHidden(!_appTheme.ShowDesktopIcons);
             if (t != IntPtr.Zero) _captures.SetWallpaper(t);
             return;
         }
 
-        string wp = NativeMethods.GetWallpaperPath();
+        var wp = NativeMethods.GetWallpaperPath();
         _captures.SetStaticWallpaper(wp);
 
         // Windows 10: live-capturing the animated/desktop wallpaper window via WGC is unreliable,
@@ -1232,24 +1252,24 @@ internal sealed class OverlayForm : Form
             return;
         }
 
-        IntPtr animated = NativeMethods.FindAnimatedWallpaperWindow();
+        var animated = NativeMethods.FindAnimatedWallpaperWindow();
         _wpAnimated = animated;
         _wpInit = true;
 
         if (animated != IntPtr.Zero)
         {
-            IntPtr target = win11 ? NativeMethods.GetAncestor(animated, NativeMethods.GA_ROOT) : animated;
-            SetDesktopIconsHidden(win11 && !AppTheme.ShowDesktopIcons);
+            var target = win11 ? NativeMethods.GetAncestor(animated, NativeMethods.GA_ROOT) : animated;
+            SetDesktopIconsHidden(win11 && !_appTheme.ShowDesktopIcons);
             ResumeWallpaperEngine(animated);
             if (target != IntPtr.Zero) _captures.SetWallpaper(target);
             else _captures.ClearWallpaper();
             return;
         }
 
-        if (AppTheme.ShowDesktopIcons)
+        if (_appTheme.ShowDesktopIcons)
         {
             SetDesktopIconsHidden(false);
-            IntPtr target = win11 ? NativeMethods.FindWindow("Progman", null) : IntPtr.Zero;
+            var target = win11 ? NativeMethods.FindWindow("Progman", null) : IntPtr.Zero;
             if (target != IntPtr.Zero) _captures.SetWallpaper(target);
             else _captures.ClearWallpaper();
         }
@@ -1261,19 +1281,19 @@ internal sealed class OverlayForm : Form
 
     private void ToggleSettings()
     {
-        if (_settings != null && !_settings.IsDisposed)
+        if (_settings?.IsDisposed == false)
         {
             _settings.Close();
             _settings = null;
             return;
         }
 
-        _settings = new SettingsForm(AppTheme, _hook);
+        _settings = new SettingsForm(_appTheme, _hook);
         _settings.Changed += () =>
         {
-            _renderer?.ApplyTheme(AppTheme); ApplyTunables(); SyncWallpaper(true);
+            _renderer?.ApplyTheme(_appTheme); ApplyTunables(); SyncWallpaper(true);
             ApplyHotkeys();
-            if (!AppTheme.ShowPaintButton) { _draw.Active = false; _drawing = null; }
+            if (!_appTheme.ShowPaintButton) { _draw.Active = false; _drawing = null; }
         };
         _settings.RearrangeRequested += RearrangeAll;
         _settings.FormClosed += (_, _) => _settings = null;
@@ -1282,7 +1302,7 @@ internal sealed class OverlayForm : Form
 
     private void HideOverlay()
     {
-        if (_settings != null && !_settings.IsDisposed) { _settings.Close(); _settings = null; }
+        if (_settings?.IsDisposed == false) { _settings.Close(); _settings = null; }
         _open = false;
         _committing = false;
         _hook.OverlayOpen = false;
@@ -1310,8 +1330,8 @@ internal sealed class OverlayForm : Form
         _captures?.PauseAll();
         _captures?.PauseWallpaper();
         Hide();
-        LayoutStore.Save(SavedPositions);
-        SizeStore.Save(SavedSizes);
+        LayoutStore.Save(_savedPositions);
+        SizeStore.Save(_savedSizes);
         PinStore.Save(_pins);
         DrawStore.Save(_strokes);
         SaveWorkspaces();
@@ -1331,11 +1351,11 @@ internal sealed class OverlayForm : Form
         {
             ApplyTunables();
 
-            IntPtr fg = NativeMethods.GetForegroundWindow();
+            var fg = NativeMethods.GetForegroundWindow();
             if (fg != IntPtr.Zero && fg != Handle && IsFullscreenWindow(fg) && NeedsEscape(fg))
             {
                 SendCleanEscape();
-                for (int i = 0; i < 12 && IsFullscreenWindow(fg); i++)
+                for (var i = 0; i < 12 && IsFullscreenWindow(fg); i++)
                     Thread.Sleep(8);
             }
 
@@ -1343,7 +1363,7 @@ internal sealed class OverlayForm : Form
             _drillApp = null;
             BuildItems();
 
-            IntPtr fgRoot = fg != IntPtr.Zero ? NativeMethods.GetAncestor(fg, NativeMethods.GA_ROOT) : IntPtr.Zero;
+            var fgRoot = fg != IntPtr.Zero ? NativeMethods.GetAncestor(fg, NativeMethods.GA_ROOT) : IntPtr.Zero;
             _spawnOpen = fgRoot == IntPtr.Zero ||
                 !_items.Any(it => it.Hwnd == fgRoot || it.StackHwnds.Contains(fgRoot));
 
@@ -1374,7 +1394,7 @@ internal sealed class OverlayForm : Form
         if (_editingPin != null)
         {
             if (key == NavKey.Enter && shift) { _editingPin.Text += "\n"; GrowNoteIfNeeded(_editingPin); }
-            else if (key == NavKey.Enter || key == NavKey.Escape) { _editingPin = null; PinStore.Save(_pins); }
+            else if (key is NavKey.Enter or NavKey.Escape) { _editingPin = null; PinStore.Save(_pins); }
             return;
         }
 
@@ -1408,7 +1428,7 @@ internal sealed class OverlayForm : Form
     {
         if (Drilled) return;
         if (_selected < 0 || _selected >= _items.Count) return;
-        Vector2 d = dir switch
+        var d = dir switch
         {
             NavKey.Left => new Vector2(-NudgeStep, 0),
             NavKey.Right => new Vector2(NudgeStep, 0),
@@ -1421,32 +1441,32 @@ internal sealed class OverlayForm : Form
     }
 
     private static void Remember(WindowItem it) =>
-        SavedPositions[it.AppKey] = it.Sliding ? it.SlideTarget : it.WorldPos;
+        _savedPositions[it.AppKey] = it.Sliding ? it.SlideTarget : it.WorldPos;
 
     private void UpdateSnapTarget()
     {
         _snapTarget = -1;
-        if (!AppTheme.DragToTile) return;
+        if (!_appTheme.DragToTile) return;
         if (_tileDrag < 0 || _tileDrag >= _items.Count) return;
         var a = _items[_tileDrag];
-        float aArea = MathF.Max(1f, a.WorldSize.X * a.WorldSize.Y);
-        float best = 0f;
-        for (int i = 0; i < _items.Count; i++)
+        var aArea = MathF.Max(1f, a.WorldSize.X * a.WorldSize.Y);
+        var best = 0f;
+        for (var i = 0; i < _items.Count; i++)
         {
             if (i == _tileDrag) continue;
             var b = _items[i];
-            float ox = MathF.Max(0f, MathF.Min(a.WorldPos.X + a.WorldSize.X, b.WorldPos.X + b.WorldSize.X) - MathF.Max(a.WorldPos.X, b.WorldPos.X));
-            float oy = MathF.Max(0f, MathF.Min(a.WorldPos.Y + a.WorldSize.Y, b.WorldPos.Y + b.WorldSize.Y) - MathF.Max(a.WorldPos.Y, b.WorldPos.Y));
-            float overlap = ox * oy;
-            float frac = overlap / MathF.Min(aArea, MathF.Max(1f, b.WorldSize.X * b.WorldSize.Y));
+            var ox = MathF.Max(0f, MathF.Min(a.WorldPos.X + a.WorldSize.X, b.WorldPos.X + b.WorldSize.X) - MathF.Max(a.WorldPos.X, b.WorldPos.X));
+            var oy = MathF.Max(0f, MathF.Min(a.WorldPos.Y + a.WorldSize.Y, b.WorldPos.Y + b.WorldSize.Y) - MathF.Max(a.WorldPos.Y, b.WorldPos.Y));
+            var overlap = ox * oy;
+            var frac = overlap / MathF.Min(aArea, MathF.Max(1f, b.WorldSize.X * b.WorldSize.Y));
             if (frac > 0.4f && overlap > best) { best = overlap; _snapTarget = i; }
         }
     }
 
     private void StepTileSlides(float dt)
     {
-        float rate = 13f * (Math.Clamp(AppTheme.SettleSpeed, 40, 200) / 100f);
-        float k = 1f - MathF.Exp(-dt * rate);
+        var rate = 13f * (Math.Clamp(_appTheme.SettleSpeed, 40, 200) / 100f);
+        var k = 1f - MathF.Exp(-dt * rate);
         foreach (var it in _items)
         {
             if (!it.Sliding) continue;
@@ -1462,9 +1482,9 @@ internal sealed class OverlayForm : Form
     private void TakeScreenshot()
     {
         if (_renderer == null) return;
-        string dir = Path.Combine(
+        var dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "PrinceWM");
-        string path = Path.Combine(dir, $"PrinceWM_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+        var path = Path.Combine(dir, $"PrinceWM_{DateTime.Now:yyyyMMdd_HHmmss}.png");
         _renderer.RequestScreenshot(path);
         _tray.BalloonTipTitle = "Screenshot copied";
         _tray.BalloonTipText = "On the clipboard, and saved to " + path;
@@ -1477,7 +1497,7 @@ internal sealed class OverlayForm : Form
 
         if (_editingPin != null) { base.OnKeyDown(e); return; }
 
-        bool handled = true;
+        var handled = true;
         switch (e.KeyCode)
         {
             case Keys.W:
@@ -1523,16 +1543,23 @@ internal sealed class OverlayForm : Form
         }
 
         if (handled) { e.Handled = true; e.SuppressKeyPress = true; }
-        else base.OnKeyDown(e);
+        else
+        {
+            base.OnKeyDown(e);
+        }
     }
 
     protected override void OnKeyPress(KeyPressEventArgs e)
     {
         if (_open && _editingPin != null)
         {
-            char c = e.KeyChar;
+            var c = e.KeyChar;
             if (c == '\b') { if (_editingPin.Text.Length > 0) _editingPin.Text = _editingPin.Text[..^1]; }
-            else if (!char.IsControl(c)) _editingPin.Text += c;
+            else if (!char.IsControl(c))
+            {
+                _editingPin.Text += c;
+            }
+
             GrowNoteIfNeeded(_editingPin);
             e.Handled = true;
             return;
@@ -1545,15 +1572,15 @@ internal sealed class OverlayForm : Form
         if (_items.Count == 0) return;
         if (_selected < 0) { _selected = 0; _camera.CenterOn(_items[0].WorldCenter); return; }
 
-        Vector2 from = _items[_selected].WorldCenter;
-        int best = -1;
-        float bestScore = float.MaxValue;
+        var from = _items[_selected].WorldCenter;
+        var best = -1;
+        var bestScore = float.MaxValue;
 
-        for (int i = 0; i < _items.Count; i++)
+        for (var i = 0; i < _items.Count; i++)
         {
             if (i == _selected) continue;
-            Vector2 d = _items[i].WorldCenter - from;
-            bool ok = dir switch
+            var d = _items[i].WorldCenter - from;
+            var ok = dir switch
             {
                 NavKey.Left => d.X < -1,
                 NavKey.Right => d.X > 1,
@@ -1563,9 +1590,9 @@ internal sealed class OverlayForm : Form
             };
             if (!ok) continue;
 
-            float along = dir is NavKey.Left or NavKey.Right ? MathF.Abs(d.X) : MathF.Abs(d.Y);
-            float perp = dir is NavKey.Left or NavKey.Right ? MathF.Abs(d.Y) : MathF.Abs(d.X);
-            float score = along + perp * 2f;
+            var along = dir is NavKey.Left or NavKey.Right ? MathF.Abs(d.X) : MathF.Abs(d.Y);
+            var perp = dir is NavKey.Left or NavKey.Right ? MathF.Abs(d.Y) : MathF.Abs(d.X);
+            var score = along + (perp * 2f);
             if (score < bestScore) { bestScore = score; best = i; }
         }
 
@@ -1587,8 +1614,8 @@ internal sealed class OverlayForm : Form
 
     private RectangleF TileScreenRect(WindowItem it)
     {
-        Vector2 tl = _camera.WorldToScreen(it.WorldPos);
-        Vector2 br = _camera.WorldToScreen(it.WorldPos + it.WorldSize);
+        var tl = _camera.WorldToScreen(it.WorldPos);
+        var br = _camera.WorldToScreen(it.WorldPos + it.WorldSize);
         return new RectangleF(tl.X, tl.Y, br.X - tl.X, br.Y - tl.Y);
     }
 
@@ -1598,7 +1625,7 @@ internal sealed class OverlayForm : Form
         _hoverClose = false;
         if (_renderer == null) return;
 
-        for (int i = _items.Count - 1; i >= 0; i--)
+        for (var i = _items.Count - 1; i >= 0; i--)
         {
             var s = _renderer.LiftedTileScreenRect(_camera, _items, i);
             if (s.Width < 60f || s.Height < 40f) continue;
@@ -1610,8 +1637,8 @@ internal sealed class OverlayForm : Form
 
     private void CloseTile(WindowItem it)
     {
-        string appKey = it.AppKey;
-        IntPtr h = it.Hwnd;
+        var appKey = it.AppKey;
+        var h = it.Hwnd;
         _closed.Add(h);
         NativeMethods.PostMessage(h, NativeMethods.WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
         _hoverIndex = -1;
@@ -1622,8 +1649,8 @@ internal sealed class OverlayForm : Form
 
     private void CloseStack(WindowItem it)
     {
-        string appKey = it.AppKey;
-        foreach (IntPtr h in it.StackHwnds)
+        var appKey = it.AppKey;
+        foreach (var h in it.StackHwnds)
         {
             _closed.Add(h);
             NativeMethods.PostMessage(h, NativeMethods.WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
@@ -1637,9 +1664,9 @@ internal sealed class OverlayForm : Form
     private void ShowTileMenu(Point p)
     {
         if (_committing) return;
-        int hit = HitTest(p);
+        var hit = HitTest(p);
         if (hit < 0) return;
-        WindowItem it = _items[hit];
+        var it = _items[hit];
 
         var menu = new ContextMenuStrip
         {
@@ -1662,12 +1689,12 @@ internal sealed class OverlayForm : Form
     {
         if (!_open || _renderer == null) return;
 
-        long now = _clock.ElapsedTicks;
-        float dt = (float)((now - _lastTicks) / (double)Stopwatch.Frequency);
+        var now = _clock.ElapsedTicks;
+        var dt = (float)((now - _lastTicks) / (double)Stopwatch.Frequency);
         _lastTicks = now;
         dt = Math.Clamp(dt, 0f, 0.05f);
 
-        bool finalizeCommit = false;
+        var finalizeCommit = false;
         if (_committing)
         {
             _commitElapsed += dt;
@@ -1705,23 +1732,23 @@ internal sealed class OverlayForm : Form
             }
             _camera.Step(dt);
             StepTileSlides(dt);
-            float commitFade = _committing ? Math.Clamp(_commitElapsed / CommitDuration, 0f, 1f) : 0f;
-            float openFade = 1f;
+            var commitFade = _committing ? Math.Clamp(_commitElapsed / CommitDuration, 0f, 1f) : 0f;
+            var openFade = 1f;
             if (_opening)
             {
-                float u = Math.Clamp(_openElapsed / OpenDuration, 0f, 1f);
+                var u = Math.Clamp(_openElapsed / OpenDuration, 0f, 1f);
                 openFade = 1f - MathF.Pow(1f - u, 3f);
             }
             if (_spawnFade < 1f)
             {
-                _spawnFade = MathF.Min(1f, _spawnFade + dt / 0.5f);
-                openFade *= _spawnFade * _spawnFade * (3f - 2f * _spawnFade);
+                _spawnFade = MathF.Min(1f, _spawnFade + (dt / 0.5f));
+                openFade *= _spawnFade * _spawnFade * (3f - (2f * _spawnFade));
             }
 
-            bool drilled = Drilled;
+            var drilled = Drilled;
             _draw.InProgress = _drawing;
             _draw.Strokes = drilled ? null : _strokes;
-            _tintFade = MathF.Min(1f, _tintFade + dt / 0.28f);
+            _tintFade = MathF.Min(1f, _tintFade + (dt / 0.28f));
             Vector2? connFrom = null, connTo = null;
             if (_connectMode && _connectFromIdx >= 0 && _connectFromIdx < _items.Count)
             {
@@ -1747,14 +1774,14 @@ internal sealed class OverlayForm : Form
     {
         if (_committing) return;
 
-        if (AppTheme.ShowPaintButton && e.Button == MouseButtons.Left &&
-            _renderer != null && _renderer.DrawToggleRect.Contains(e.Location))
+        if (_appTheme.ShowPaintButton && e.Button == MouseButtons.Left &&
+            _renderer?.DrawToggleRect.Contains(e.Location) == true)
         {
             ToggleDraw();
             return;
         }
 
-        if (_renderer != null && _renderer.ArrowRect.Contains(e.Location))
+        if (_renderer?.ArrowRect.Contains(e.Location) == true)
         {
             ToggleSettings();
             return;
@@ -1765,7 +1792,7 @@ internal sealed class OverlayForm : Form
         if (_connectMode)
         {
             if (e.Button != MouseButtons.Left) { _connectMode = false; _connectFromIdx = -1; return; }
-            int hit = HitTest(e.Location);
+            var hit = HitTest(e.Location);
             if (hit < 0) { _connectMode = false; _connectFromIdx = -1; return; }
             if (_connectFromIdx < 0 || _connectFromIdx >= _items.Count) { _connectFromIdx = hit; _lastMouse = e.Location; return; }
             if (hit != _connectFromIdx) ConnectTiles(_items[_connectFromIdx].AppKey, _items[hit].AppKey);
@@ -1789,7 +1816,7 @@ internal sealed class OverlayForm : Form
             UpdatePinHover(e.Location);
             if (_hoverPin >= 0)
             {
-                Pin pin = _pins[_hoverPin];
+                var pin = _pins[_hoverPin];
                 if (_hoverPinClose) { RemovePin(pin); return; }
                 if (_resizing == pin) { _pinResizeDrag = true; _lastMouse = e.Location; return; }
                 _resizing = null;
@@ -1817,12 +1844,12 @@ internal sealed class OverlayForm : Form
             _resizing = null;
         }
 
-        bool alt = (ModifierKeys & Keys.Alt) != 0;
-        bool shift = (ModifierKeys & Keys.Shift) != 0;
+        var alt = (ModifierKeys & Keys.Alt) != 0;
+        var shift = (ModifierKeys & Keys.Shift) != 0;
 
         if (e.Button == MouseButtons.Middle || (e.Button == MouseButtons.Left && alt))
         {
-            int hit = HitTest(e.Location);
+            var hit = HitTest(e.Location);
             if (hit >= 0)
             {
                 if (e.Button == MouseButtons.Middle && Drilled)
@@ -1869,11 +1896,11 @@ internal sealed class OverlayForm : Form
             var ws = _workspaces.Find(w => w.Id == _wsLabelDrag);
             if (ws != null)
             {
-                Vector2 w = _camera.ScreenToWorld(new Vector2(e.X, e.Y));
+                var w = _camera.ScreenToWorld(new Vector2(e.X, e.Y));
                 if (Math.Abs(e.X - _downMouse.X) + Math.Abs(e.Y - _downMouse.Y) > DragThreshold) _wsLabelDragged = true;
                 if (_wsLabelDragged)
                 {
-                    Vector2 d = w - _wsLabelDragLast;
+                    var d = w - _wsLabelDragLast;
                     foreach (var it in _items) if (ws.Has(it.AppKey)) { it.WorldPos += d; Remember(it); }
                     _wsLabelDragLast = w;
                 }
@@ -1884,7 +1911,7 @@ internal sealed class OverlayForm : Form
 
         if (_pinResizeDrag && _resizing != null)
         {
-            Vector2 w = _camera.ScreenToWorld(new Vector2(e.X, e.Y));
+            var w = _camera.ScreenToWorld(new Vector2(e.X, e.Y));
             _resizing.W = MathF.Max(60f, w.X - _resizing.X);
             _resizing.H = MathF.Max(40f, w.Y - _resizing.Y);
             _lastMouse = e.Location;
@@ -1897,7 +1924,7 @@ internal sealed class OverlayForm : Form
                 _pinDragged = true;
             if (_pinDragged && _pinDrag < _pins.Count)
             {
-                Vector2 w = _camera.ScreenToWorld(new Vector2(e.X, e.Y)) - _pinDragOffset;
+                var w = _camera.ScreenToWorld(new Vector2(e.X, e.Y)) - _pinDragOffset;
                 _pins[_pinDrag].X = w.X;
                 _pins[_pinDrag].Y = w.Y;
             }
@@ -1920,7 +1947,7 @@ internal sealed class OverlayForm : Form
             }
             else
             {
-                WindowItem moved = _items[_tileDrag];
+                var moved = _items[_tileDrag];
                 moved.WorldPos += worldDelta;
                 Remember(moved);
                 UpdateSnapTarget();
@@ -1939,12 +1966,12 @@ internal sealed class OverlayForm : Form
             var delta = new Vector2(e.X - _lastMouse.X, e.Y - _lastMouse.Y);
             _camera.PanByScreen(delta);
 
-            long now = _clock.ElapsedTicks;
-            float dt = (float)((now - _lastMoveTicks) / (double)Stopwatch.Frequency);
+            var now = _clock.ElapsedTicks;
+            var dt = (float)((now - _lastMoveTicks) / (double)Stopwatch.Frequency);
             _lastMoveTicks = now;
             if (dt > 0.0001f)
             {
-                Vector2 inst = delta / dt;
+                var inst = delta / dt;
                 _dragVel = Vector2.Lerp(_dragVel, inst, 0.4f);
             }
         }
@@ -1959,7 +1986,7 @@ internal sealed class OverlayForm : Form
         {
             if (_connectFromIdx >= 0 && _connectFromIdx < _items.Count)
             {
-                int tgt = HitTest(e.Location);
+                var tgt = HitTest(e.Location);
                 if (tgt >= 0 && tgt != _connectFromIdx)
                 {
                     ConnectTiles(_items[_connectFromIdx].AppKey, _items[tgt].AppKey);
@@ -1997,14 +2024,14 @@ internal sealed class OverlayForm : Form
             return;
         }
 
-        if (_renderer != null && _renderer.ArrowRect.Contains(e.Location) && _tileDrag < 0 && !_dragged)
+        if (_renderer?.ArrowRect.Contains(e.Location) == true && _tileDrag < 0 && !_dragged)
             return;
 
         if (_tileDrag >= 0)
         {
             if (_drillOnClick >= 0 && _drillOnClick < _items.Count && _items[_drillOnClick].StackCount > 1)
             {
-                string appKey = _items[_drillOnClick].AppKey;
+                var appKey = _items[_drillOnClick].AppKey;
                 _tileDrag = -1; _dragCluster = null; _drillOnClick = -1;
                 EnterDrill(appKey);
                 return;
@@ -2013,11 +2040,11 @@ internal sealed class OverlayForm : Form
             if (_dragCluster == null && _snapTarget >= 0 && _snapTarget < _items.Count &&
                 _tileDrag < _items.Count && _snapTarget != _tileDrag)
             {
-                WindowItem a = _items[_tileDrag];
-                WindowItem b = _items[_snapTarget];
-                bool dragLeft = a.WorldCenter.X <= b.WorldCenter.X;
-                IntPtr left = (dragLeft ? a : b).Hwnd;
-                IntPtr right = (dragLeft ? b : a).Hwnd;
+                var a = _items[_tileDrag];
+                var b = _items[_snapTarget];
+                var dragLeft = a.WorldCenter.X <= b.WorldCenter.X;
+                var left = (dragLeft ? a : b).Hwnd;
+                var right = (dragLeft ? b : a).Hwnd;
                 BumpMru(a.Hwnd); BumpMru(b.Hwnd);
                 _snapTarget = -1; _tileDrag = -1; _dragCluster = null; _drillOnClick = -1;
                 _savedZoom = _camera.Zoom;
@@ -2029,7 +2056,7 @@ internal sealed class OverlayForm : Form
             if (_dragCluster == null && _tileDrag < _items.Count)
             {
                 var moved = _items[_tileDrag];
-                Vector2 resolved = Collision.Resolve(moved.WorldPos, moved.WorldSize, Obstacles(moved), 12f);
+                var resolved = Collision.Resolve(moved.WorldPos, moved.WorldSize, Obstacles(moved), 12f);
                 if ((resolved - moved.WorldPos).LengthSquared() > 0.5f)
                 {
                     moved.SlideTarget = resolved;
@@ -2046,7 +2073,7 @@ internal sealed class OverlayForm : Form
         if (e.Button == MouseButtons.Middle) return;
         if (_committing) return;
 
-        bool wasDrag = _dragged;
+        var wasDrag = _dragged;
         _mouseDown = false;
         _dragged = false;
         if (wasDrag)
@@ -2063,7 +2090,7 @@ internal sealed class OverlayForm : Form
             return;
         }
 
-        int hit = HitTest(e.Location);
+        var hit = HitTest(e.Location);
         if (hit >= 0) { BeginCommit(hit); return; }
 
         var ghost = GhostHit(e.Location);
@@ -2073,15 +2100,15 @@ internal sealed class OverlayForm : Form
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         if (_committing) return;
-        float factor = MathF.Pow(1.2f, e.Delta / 120f);
+        var factor = MathF.Pow(1.2f, e.Delta / 120f);
         _camera.ZoomAt(new Vector2(e.X, e.Y), factor);
     }
 
     private int HitTest(Point screen)
     {
-        Vector2 world = _camera.ScreenToWorld(new Vector2(screen.X, screen.Y));
+        var world = _camera.ScreenToWorld(new Vector2(screen.X, screen.Y));
 
-        for (int i = _items.Count - 1; i >= 0; i--)
+        for (var i = _items.Count - 1; i >= 0; i--)
             if (_items[i].ContainsWorldPoint(world)) return i;
         return -1;
     }
@@ -2102,8 +2129,8 @@ internal sealed class OverlayForm : Form
         if (disposing)
         {
             SetDesktopIconsHidden(false);
-            LayoutStore.Save(SavedPositions);
-            SizeStore.Save(SavedSizes);
+            LayoutStore.Save(_savedPositions);
+            SizeStore.Save(_savedSizes);
             PinStore.Save(_pins);
             DrawStore.Save(_strokes);
             Application.Idle -= OnIdle;

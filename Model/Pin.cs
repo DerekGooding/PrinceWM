@@ -22,7 +22,7 @@ internal sealed class Pin
 
     public Vector2 Pos => new(X, Y);
     public Vector2 SizeV => new(W, H);
-    public Vector2 Center => new(X + W * 0.5f, Y + H * 0.5f);
+    public Vector2 Center => new(X + (W * 0.5f), Y + (H * 0.5f));
 
     public bool Contains(Vector2 p) => p.X >= X && p.Y >= Y && p.X <= X + W && p.Y <= Y + H;
 

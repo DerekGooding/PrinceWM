@@ -7,7 +7,7 @@ namespace PrinceWM.Helpers;
 
 internal static class WindowScanner
 {
-    private static readonly HashSet<string> ClassBlocklist = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> _classBlocklist = new(StringComparer.Ordinal)
     {
         "Progman",
         "WorkerW",
@@ -24,7 +24,7 @@ internal static class WindowScanner
     Dictionary<string, Vector2>? sizeCache = null)
     {
         var results = new List<WindowItem>();
-        IntPtr shell = GetShellWindow();
+        var shell = GetShellWindow();
 
         EnumWindows((hWnd, _) =>
         {
@@ -32,29 +32,29 @@ internal static class WindowScanner
             if (hWnd == shell) return true;
             if (!IsWindowVisible(hWnd)) return true;
 
-            int len = GetWindowTextLength(hWnd);
+            var len = GetWindowTextLength(hWnd);
             if (len == 0) return true;
 
-            long exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE).ToInt64();
-            bool toolWindow = (exStyle & WS_EX_TOOLWINDOW) != 0;
-            bool appWindow = (exStyle & WS_EX_APPWINDOW) != 0;
+            var exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE).ToInt64();
+            var toolWindow = (exStyle & WS_EX_TOOLWINDOW) != 0;
+            var appWindow = (exStyle & WS_EX_APPWINDOW) != 0;
             if (toolWindow && !appWindow) return true;
 
             if (!appWindow)
             {
-                IntPtr root = GetAncestor(hWnd, GA_ROOTOWNER);
+                var root = GetAncestor(hWnd, GA_ROOTOWNER);
                 if (LastVisibleActivePopup(root) != hWnd) return true;
             }
 
             if (IsCloaked(hWnd)) return true;
 
-            string cls = GetClass(hWnd);
-            if (ClassBlocklist.Contains(cls)) return true;
+            var cls = GetClass(hWnd);
+            if (_classBlocklist.Contains(cls)) return true;
 
-            string title = GetTitle(hWnd, len);
+            var title = GetTitle(hWnd, len);
             if (string.IsNullOrWhiteSpace(title)) return true;
 
-            bool minimized = IsIconic(hWnd);
+            var minimized = IsIconic(hWnd);
             if (minimized && !includeMinimized) return true;
 
             int x, y, w, h;
@@ -63,7 +63,7 @@ internal static class WindowScanner
                 var wp = new WINDOWPLACEMENT { length = Marshal.SizeOf<WINDOWPLACEMENT>() };
                 if (GetWindowPlacement(hWnd, ref wp))
                 {
-                    RECT nr = wp.rcNormalPosition;
+                    var nr = wp.rcNormalPosition;
                     x = nr.Left; y = nr.Top; w = nr.Width; h = nr.Height;
                 }
                 else { x = 0; y = 0; w = 960; h = 600; }
@@ -71,20 +71,20 @@ internal static class WindowScanner
             else
             {
                 RECT r;
-                if (GetExtendedFrameBounds(hWnd, out RECT efb) && efb.Width > 0 && efb.Height > 0)
+                if (GetExtendedFrameBounds(hWnd, out var efb) && efb.Width > 0 && efb.Height > 0)
                     r = efb;
                 else if (!GetWindowRect(hWnd, out r)) return true;
                 x = r.Left; y = r.Top; w = r.Width; h = r.Height;
             }
             if (w <= 0 || h <= 0) { w = 960; h = 600; }
 
-            string appKey = $"{ProcessNameOf(hWnd)}|{cls}";
+            var appKey = $"{ProcessNameOf(hWnd)}|{cls}";
 
             var size = new Vector2(w, h);
             if (sizeCache != null)
             {
-                bool sane = w >= 150 && h >= 120 && w <= 16000 && h <= 16000;
-                bool hasGood = sizeCache.TryGetValue(appKey, out var good);
+                var sane = w >= 150 && h >= 120 && w <= 16000 && h <= 16000;
+                var hasGood = sizeCache.TryGetValue(appKey, out var good);
                 if (!minimized && sane) sizeCache[appKey] = size;
                 else if (hasGood) size = good;
                 else if (sane) sizeCache[appKey] = size;
@@ -110,7 +110,7 @@ internal static class WindowScanner
     {
         try
         {
-            GetWindowThreadProcessId(hWnd, out uint pid);
+            GetWindowThreadProcessId(hWnd, out var pid);
             using var p = System.Diagnostics.Process.GetProcessById((int)pid);
             return p.ProcessName;
         }
@@ -119,10 +119,10 @@ internal static class WindowScanner
 
     private static IntPtr LastVisibleActivePopup(IntPtr window)
     {
-        IntPtr cur = window;
-        for (int i = 0; i < 32; i++)
+        var cur = window;
+        for (var i = 0; i < 32; i++)
         {
-            IntPtr popup = GetLastActivePopup(cur);
+            var popup = GetLastActivePopup(cur);
             if (IsWindowVisible(popup)) return popup;
             if (popup == cur) return IntPtr.Zero;
             cur = popup;
@@ -132,8 +132,7 @@ internal static class WindowScanner
 
     private static bool IsCloaked(IntPtr hWnd)
     {
-        int cloaked = 0;
-        int hr = DwmGetWindowAttribute(hWnd, DWMWA_CLOAKED, out cloaked, sizeof(int));
+        var hr = DwmGetWindowAttribute(hWnd, DWMWA_CLOAKED, out int cloaked, sizeof(int));
         return hr == 0 && cloaked != 0;
     }
 
@@ -163,11 +162,11 @@ internal static class WindowScanner
         // so the target is the foreground window before the overlay hides (no old-window flash),
         // with no thread attach to stall on. The timeout is restored right after.
         uint prevTimeout = 0;
-        bool gotTimeout = SystemParametersInfoGet(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, ref prevTimeout, 0);
+        var gotTimeout = SystemParametersInfoGet(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, ref prevTimeout, 0);
         SystemParametersInfoSet(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, IntPtr.Zero, 0); // in-memory, no broadcast
 
         BringWindowToTop(hWnd);
-        bool ok = SetForegroundWindow(hWnd);
+        var ok = SetForegroundWindow(hWnd);
 
         if (gotTimeout)
             SystemParametersInfoSet(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, (IntPtr)prevTimeout, 0);

@@ -63,30 +63,30 @@ internal static class NativeMethods
 
     public static IntPtr FindAnimatedWallpaperWindow()
     {
-        IntPtr best = IntPtr.Zero;
+        var best = IntPtr.Zero;
         long bestArea = 0;
 
         void Consider(IntPtr h)
         {
             if (!IsWindowVisible(h)) return;
-            string proc = ProcessNameOf(h);
+            var proc = ProcessNameOf(h);
 
-            bool we = proc.StartsWith("wallpaper", StringComparison.OrdinalIgnoreCase)
+            var we = proc.StartsWith("wallpaper", StringComparison.OrdinalIgnoreCase)
                       && !proc.StartsWith("wallpaperengine", StringComparison.OrdinalIgnoreCase);
 
-            bool lively = proc.StartsWith("lively", StringComparison.OrdinalIgnoreCase)
+            var lively = proc.StartsWith("lively", StringComparison.OrdinalIgnoreCase)
                           || proc.Equals("libmpvplayer", StringComparison.OrdinalIgnoreCase);
             if (!we && !lively) return;
-            if (!GetWindowRect(h, out RECT r)) return;
+            if (!GetWindowRect(h, out var r)) return;
 
             if (!CoversMonitor(r)) return;
-            long area = (long)r.Width * r.Height;
+            var area = (long)r.Width * r.Height;
             if (area > bestArea) { bestArea = area; best = h; }
         }
 
         EnumWindows((h, _) => { Consider(h); return true; }, IntPtr.Zero);
         var consider = new EnumWindowsProc((h, _) => { Consider(h); return true; });
-        IntPtr progman = FindWindow("Progman", null);
+        var progman = FindWindow("Progman", null);
         if (progman != IntPtr.Zero) EnumChildWindows(progman, consider, IntPtr.Zero);
         EnumWindows((top, _) =>
         {
@@ -101,7 +101,7 @@ internal static class NativeMethods
     {
         try
         {
-            GetWindowThreadProcessId(h, out uint pid);
+            GetWindowThreadProcessId(h, out var pid);
             using var p = System.Diagnostics.Process.GetProcessById((int)pid);
             return p.ProcessName;
         }
@@ -124,17 +124,19 @@ internal static class NativeMethods
             var b = sc.Bounds;
             if (Math.Abs(r.Left - b.Left) <= 6 && Math.Abs(r.Top - b.Top) <= 6 &&
                 Math.Abs(r.Width - b.Width) <= 6 && Math.Abs(r.Height - b.Height) <= 6)
+            {
                 return true;
+            }
         }
         return false;
     }
 
     public static IntPtr FindWallpaperWorkerW()
     {
-        IntPtr progman = FindWindow("Progman", null);
+        var progman = FindWindow("Progman", null);
         SendMessageTimeout(progman, 0x052C, IntPtr.Zero, IntPtr.Zero, 0, 1000, out _);
 
-        IntPtr worker = IntPtr.Zero;
+        var worker = IntPtr.Zero;
         EnumWindows((top, _) =>
         {
             if (FindWindowEx(top, IntPtr.Zero, "SHELLDLL_DefView", null) != IntPtr.Zero)
@@ -162,10 +164,10 @@ internal static class NativeMethods
     {
         var sb = new StringBuilder(520);
         SystemParametersInfo(0x0073, (uint)sb.Capacity, sb, 0);
-        string p = sb.ToString();
+        var p = sb.ToString();
         if (!string.IsNullOrEmpty(p) && File.Exists(p)) return p;
 
-        string td = Path.Combine(
+        var td = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Microsoft", "Windows", "Themes", "TranscodedWallpaper");
         return File.Exists(td) ? td : p;
@@ -253,9 +255,9 @@ internal static class NativeMethods
 
     public static string ProcessPath(IntPtr hWnd)
     {
-        GetWindowThreadProcessId(hWnd, out uint pid);
+        GetWindowThreadProcessId(hWnd, out var pid);
         if (pid == 0) return "";
-        IntPtr h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        var h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
         if (h == IntPtr.Zero) return "";
         try
         {
@@ -284,25 +286,25 @@ internal static class NativeMethods
 
     public static IntPtr GetWindowIconHandle(IntPtr hWnd)
     {
-        foreach (IntPtr type in new[] { (IntPtr)1, (IntPtr)2, (IntPtr)0 })
+        foreach (var type in new[] { (IntPtr)1, (IntPtr)2, (IntPtr)0 })
         {
-            SendMessageTimeout(hWnd, WM_GETICON, type, IntPtr.Zero, SMTO_ABORTIFHUNG, 120, out IntPtr r);
+            SendMessageTimeout(hWnd, WM_GETICON, type, IntPtr.Zero, SMTO_ABORTIFHUNG, 120, out var r);
             if (r != IntPtr.Zero) return r;
         }
-        IntPtr h = GetClassLongPtr(hWnd, GCLP_HICON);
+        var h = GetClassLongPtr(hWnd, GCLP_HICON);
         return h != IntPtr.Zero ? h : GetClassLongPtr(hWnd, GCLP_HICONSM);
     }
 
     public static IntPtr GetDesktopIconHost()
     {
-        IntPtr progman = FindWindow("Progman", null);
-        IntPtr defView = FindWindowEx(progman, IntPtr.Zero, "SHELLDLL_DefView", null);
+        var progman = FindWindow("Progman", null);
+        var defView = FindWindowEx(progman, IntPtr.Zero, "SHELLDLL_DefView", null);
         if (defView != IntPtr.Zero) return defView;
 
-        IntPtr found = IntPtr.Zero;
+        var found = IntPtr.Zero;
         EnumWindows((top, _) =>
         {
-            IntPtr dv = FindWindowEx(top, IntPtr.Zero, "SHELLDLL_DefView", null);
+            var dv = FindWindowEx(top, IntPtr.Zero, "SHELLDLL_DefView", null);
             if (dv != IntPtr.Zero) { found = dv; return false; }
             return true;
         }, IntPtr.Zero);

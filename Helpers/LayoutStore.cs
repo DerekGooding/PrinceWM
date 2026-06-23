@@ -14,10 +14,10 @@ internal static class LayoutStore
     {
         try
         {
-            if (!File.Exists(FilePath)) return new();
-            string json = File.ReadAllText(FilePath);
+            if (!File.Exists(FilePath)) return [];
+            var json = File.ReadAllText(FilePath);
             var raw = JsonSerializer.Deserialize<Dictionary<string, float[]>>(json);
-            if (raw == null) return new();
+            if (raw == null) return [];
             var dict = new Dictionary<string, Vector2>();
             foreach (var (k, v) in raw)
                 if (v.Length == 2) dict[k] = new Vector2(v[0], v[1]);
@@ -26,7 +26,7 @@ internal static class LayoutStore
         catch (Exception ex)
         {
             Log.Ex("LayoutStore.Load", ex);
-            return new();
+            return [];
         }
     }
 
@@ -37,7 +37,7 @@ internal static class LayoutStore
             Directory.CreateDirectory(Dir);
             var raw = new Dictionary<string, float[]>();
             foreach (var (k, v) in positions)
-                raw[k] = new[] { v.X, v.Y };
+                raw[k] = [v.X, v.Y];
             File.WriteAllText(FilePath, JsonSerializer.Serialize(raw));
         }
         catch (Exception ex)

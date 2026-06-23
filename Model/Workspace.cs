@@ -5,9 +5,9 @@ internal sealed class Workspace
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "Workspace";
     public int Tint { get; set; } = Theme.Rgb(135, 139, 146);
-    public List<string> Members { get; set; } = new();
-    public List<WsLink> Links { get; set; } = new();
-    public Dictionary<string, GhostInfo> Info { get; set; } = new();
+    public List<string> Members { get; set; } = [];
+    public List<WsLink> Links { get; set; } = [];
+    public Dictionary<string, GhostInfo> Info { get; set; } = [];
 
     public bool Has(string appKey) => Members.Contains(appKey);
 

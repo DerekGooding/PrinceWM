@@ -20,12 +20,18 @@ internal static class LayoutManager
                 it.WorldPos = p;
                 placed.Add(it);
             }
-            else toPlace.Add(it);
+            else
+            {
+                toPlace.Add(it);
+            }
         }
 
         if (placed.Count == 0)
+        {
             NativeLayout.Apply(items);
+        }
         else
+        {
             foreach (var it in toPlace)
             {
                 it.WorldPos = saved.TryGetValue(it.AppKey, out var want)
@@ -33,6 +39,7 @@ internal static class LayoutManager
                     : FindFreeSpot(it, placed, obstacles);
                 placed.Add(it);
             }
+        }
 
         foreach (var it in items)
             saved[it.AppKey] = it.WorldPos;
@@ -43,12 +50,12 @@ internal static class LayoutManager
     {
         if (placed.Count == 0) return Vector2.Zero;
 
-        for (int attempt = 0; attempt < 80; attempt++)
+        for (var attempt = 0; attempt < 80; attempt++)
         {
             var anchor = placed[Rng.Next(placed.Count)];
-            foreach (int side in ShuffledSides())
+            foreach (var side in ShuffledSides())
             {
-                Vector2 pos = side switch
+                var pos = side switch
                 {
                     0 => new Vector2(anchor.WorldPos.X + anchor.WorldSize.X + Gap, anchor.WorldPos.Y),
                     1 => new Vector2(anchor.WorldPos.X, anchor.WorldPos.Y + anchor.WorldSize.Y + Gap),
@@ -73,22 +80,22 @@ internal static class LayoutManager
     {
         if (!Collides(desired, it.WorldSize, placed, obstacles)) return desired;
 
-        float stepX = (it.WorldSize.X + Gap) * 0.5f;
-        float stepY = (it.WorldSize.Y + Gap) * 0.5f;
+        var stepX = (it.WorldSize.X + Gap) * 0.5f;
+        var stepY = (it.WorldSize.Y + Gap) * 0.5f;
 
-        for (int ring = 1; ring <= 30; ring++)
+        for (var ring = 1; ring <= 30; ring++)
         {
-            int samples = ring * 8;
+            var samples = ring * 8;
             Vector2 best = default;
-            float bestDist = float.MaxValue;
-            for (int s = 0; s < samples; s++)
+            var bestDist = float.MaxValue;
+            for (var s = 0; s < samples; s++)
             {
-                float ang = s * (MathF.PI * 2f) / samples;
+                var ang = s * (MathF.PI * 2f) / samples;
                 var pos = new Vector2(
-                    desired.X + MathF.Cos(ang) * ring * stepX,
-                    desired.Y + MathF.Sin(ang) * ring * stepY);
+                    desired.X + (MathF.Cos(ang) * ring * stepX),
+                    desired.Y + (MathF.Sin(ang) * ring * stepY));
                 if (Collides(pos, it.WorldSize, placed, obstacles)) continue;
-                float d = Vector2.DistanceSquared(pos, desired);
+                var d = Vector2.DistanceSquared(pos, desired);
                 if (d < bestDist) { bestDist = d; best = pos; }
             }
             if (bestDist < float.MaxValue) return best;
@@ -100,9 +107,9 @@ internal static class LayoutManager
     private static int[] ShuffledSides()
     {
         var s = new[] { 0, 1, 2, 3 };
-        for (int i = s.Length - 1; i > 0; i--)
+        for (var i = s.Length - 1; i > 0; i--)
         {
-            int j = Rng.Next(i + 1);
+            var j = Rng.Next(i + 1);
             (s[i], s[j]) = (s[j], s[i]);
         }
         return s;
@@ -121,8 +128,13 @@ internal static class LayoutManager
         foreach (var p in placed)
             if (Collision.Overlaps(pos, size, p.WorldPos, p.WorldSize, Gap)) return true;
         if (obstacles != null)
+        {
             foreach (var (op, os) in obstacles)
+            {
                 if (Collision.Overlaps(pos, size, op, os, Gap)) return true;
+            }
+        }
+
         return false;
     }
 }

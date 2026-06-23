@@ -30,11 +30,11 @@ internal static class Snapping
         float aL = a.WorldPos.X, aR = aL + a.WorldSize.X, aT = a.WorldPos.Y, aB = aT + a.WorldSize.Y;
         float bL = b.WorldPos.X, bR = bL + b.WorldSize.X, bT = b.WorldPos.Y, bB = bT + b.WorldSize.Y;
 
-        bool yOverlap = aT < bB && aB > bT;
-        bool xOverlap = aL < bR && aR > bL;
+        var yOverlap = aT < bB && aB > bT;
+        var xOverlap = aL < bR && aR > bL;
 
-        bool touchVert = yOverlap && (MathF.Abs(aR - bL) <= eps || MathF.Abs(aL - bR) <= eps);
-        bool touchHorz = xOverlap && (MathF.Abs(aB - bT) <= eps || MathF.Abs(aT - bB) <= eps);
+        var touchVert = yOverlap && (MathF.Abs(aR - bL) <= eps || MathF.Abs(aL - bR) <= eps);
+        var touchHorz = xOverlap && (MathF.Abs(aB - bT) <= eps || MathF.Abs(aT - bB) <= eps);
         return touchVert || touchHorz;
     }
 }

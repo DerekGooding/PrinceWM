@@ -7,21 +7,21 @@ internal static class UpdateChecker
 {
     private const string Repo = "Ravestars/PrinceWM";
 
-    private static readonly string Dir =
+    private static readonly string _dir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM");
 
-    private static readonly string OptOutPath = Path.Combine(Dir, "updates-disabled");
+    private static readonly string _optOutPath = Path.Combine(_dir, "updates-disabled");
 
     public static string ReleasesUrl => $"https://github.com/{Repo}/releases/latest";
 
-    public static bool OptedOut => File.Exists(OptOutPath);
+    public static bool OptedOut => File.Exists(_optOutPath);
 
     public static void DisableForever()
     {
         try
         {
-            Directory.CreateDirectory(Dir);
-            File.WriteAllText(OptOutPath, "1");
+            Directory.CreateDirectory(_dir);
+            File.WriteAllText(_optOutPath, "1");
         }
         catch (Exception ex) { Log.Ex("UpdateChecker.DisableForever", ex); }
     }
@@ -42,14 +42,14 @@ internal static class UpdateChecker
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("PrinceWM");
-            string json = await http.GetStringAsync($"https://api.github.com/repos/{Repo}/releases/latest");
+            var json = await http.GetStringAsync($"https://api.github.com/repos/{Repo}/releases/latest");
 
             using var doc = JsonDocument.Parse(json);
             if (!doc.RootElement.TryGetProperty("tag_name", out var tagEl)) return null;
-            string? tag = tagEl.GetString();
+            var tag = tagEl.GetString();
             if (string.IsNullOrWhiteSpace(tag)) return null;
 
-            string num = tag.TrimStart('v', 'V');
+            var num = tag.TrimStart('v', 'V');
             if (!Version.TryParse(num, out var latest)) return null;
 
             var cur = Current;

@@ -4,7 +4,7 @@ namespace PrinceWM.Helpers;
 
 internal static class WorkspaceStore
 {
-    private static readonly string Dir =
+    private static readonly string _dir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM", "workspaces");
 
     public static List<Workspace> Load()
@@ -12,13 +12,13 @@ internal static class WorkspaceStore
         var list = new List<Workspace>();
         try
         {
-            if (!Directory.Exists(Dir)) return list;
-            foreach (var file in Directory.GetFiles(Dir, "*.json"))
+            if (!Directory.Exists(_dir)) return list;
+            foreach (var file in Directory.GetFiles(_dir, "*.json"))
             {
                 try
                 {
                     var ws = JsonSerializer.Deserialize<Workspace>(File.ReadAllText(file));
-                    if (ws != null && ws.Members.Count >= 1) list.Add(ws);
+                    if (ws?.Members.Count >= 1) list.Add(ws);
                 }
                 catch (Exception ex) { Log.Ex("WorkspaceStore.Load.file", ex); }
             }
@@ -31,16 +31,16 @@ internal static class WorkspaceStore
     {
         try
         {
-            Directory.CreateDirectory(Dir);
+            Directory.CreateDirectory(_dir);
             var keep = new HashSet<string>();
             foreach (var ws in workspaces)
             {
                 keep.Add(ws.Id);
-                File.WriteAllText(Path.Combine(Dir, ws.Id + ".json"), JsonSerializer.Serialize(ws));
+                File.WriteAllText(Path.Combine(_dir, ws.Id + ".json"), JsonSerializer.Serialize(ws));
             }
-            foreach (var file in Directory.GetFiles(Dir, "*.json"))
+            foreach (var file in Directory.GetFiles(_dir, "*.json"))
             {
-                string id = Path.GetFileNameWithoutExtension(file);
+                var id = Path.GetFileNameWithoutExtension(file);
                 if (!keep.Contains(id)) { try { File.Delete(file); } catch { } }
             }
         }

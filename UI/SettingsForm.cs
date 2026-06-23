@@ -1,4 +1,3 @@
-using PrinceWM.Services;
 using System.Diagnostics;
 
 namespace PrinceWM.UI;
@@ -22,7 +21,8 @@ internal sealed class SettingsForm : Form, IMessageFilter
 
     private readonly System.Windows.Forms.Timer _slide = new() { Interval = 15 };
     private readonly Stopwatch _slideClock = new();
-    private int _targetLeft, _startLeft;
+    private readonly int _targetLeft;
+    private int _startLeft;
 
     public SettingsForm(Theme theme, AltTabHook hook)
     {
@@ -82,7 +82,7 @@ internal sealed class SettingsForm : Form, IMessageFilter
                 if (apply == null) return;
                 if (_capRequireMod && mods == 0)
                 {
-                    if (_capBox != null) _capBox.Text = "Use a modifier";
+                    _capBox?.Text = "Use a modifier";
                     return;
                 }
                 apply(mods, key);
@@ -99,7 +99,7 @@ internal sealed class SettingsForm : Form, IMessageFilter
         if (m.Msg != WM_MOUSEWHEEL || !Visible || _content == null) return false;
         if (!ClientRectangle.Contains(PointToClient(Cursor.Position))) return false;
         int delta = (short)((long)m.WParam >> 16);
-        int cur = -_content.AutoScrollPosition.Y;
+        var cur = -_content.AutoScrollPosition.Y;
         _content.AutoScrollPosition = new Point(0, cur - delta);
         return true;
     }
@@ -107,9 +107,9 @@ internal sealed class SettingsForm : Form, IMessageFilter
     private void SlideStep()
     {
         const float dur = 0.24f;
-        float t = (float)Math.Clamp(_slideClock.Elapsed.TotalSeconds / dur, 0, 1);
-        float e = 1f - MathF.Pow(1f - t, 3f);
-        Left = (int)(_startLeft + (_targetLeft - _startLeft) * e);
+        var t = (float)Math.Clamp(_slideClock.Elapsed.TotalSeconds / dur, 0, 1);
+        var e = 1f - MathF.Pow(1f - t, 3f);
+        Left = (int)(_startLeft + ((_targetLeft - _startLeft) * e));
         if (t >= 1f) _slide.Stop();
     }
 
@@ -121,7 +121,7 @@ internal sealed class SettingsForm : Form, IMessageFilter
         Controls.Add(new Panel { Left = 0, Top = 0, Width = 3, Height = ClientSize.Height, BackColor = ModernUI.Accent });
 
         var header = new Panel { Left = 0, Top = 0, Width = ClientSize.Width, Height = 54, BackColor = Color.Transparent };
-        int tx = 22;
+        var tx = 22;
         tx += AddTab(header, "Customize", 0, tx) + 18;
         AddTab(header, "Hotkeys", 1, tx);
         var close = new Label { Text = "✕", Left = ClientSize.Width - 42, Top = 16, Width = 24, Height = 24, ForeColor = ModernUI.SubText, Font = new Font("Segoe UI", 11f), TextAlign = ContentAlignment.MiddleCenter, Cursor = Cursors.Hand };
@@ -131,7 +131,7 @@ internal sealed class SettingsForm : Form, IMessageFilter
         header.Controls.Add(close);
         Controls.Add(header);
 
-        int vsb = SystemInformation.VerticalScrollBarWidth;
+        var vsb = SystemInformation.VerticalScrollBarWidth;
         _content = new Panel
         {
             Left = 0,
@@ -143,14 +143,14 @@ internal sealed class SettingsForm : Form, IMessageFilter
         };
         Controls.Add(_content);
 
-        int y = 10;
+        var y = 10;
         if (_tab == 0) BuildCustomize(ref y);
         else BuildHotkeys(ref y);
     }
 
     private int AddTab(Panel header, string text, int index, int left)
     {
-        bool active = _tab == index;
+        var active = _tab == index;
         var lbl = new Label
         {
             Text = text,
@@ -163,7 +163,7 @@ internal sealed class SettingsForm : Form, IMessageFilter
         };
         lbl.Click += (_, _) => { if (_tab != index) { _tab = index; Build(); } };
         header.Controls.Add(lbl);
-        int w = TextRenderer.MeasureText(text, lbl.Font).Width;
+        var w = TextRenderer.MeasureText(text, lbl.Font).Width;
         if (active)
             header.Controls.Add(new Panel { Left = left, Top = 44, Width = w, Height = 2, BackColor = ModernUI.Accent });
         return w;
@@ -267,7 +267,7 @@ internal sealed class SettingsForm : Form, IMessageFilter
     private void KeybindRow(string label, Func<(int mods, int key)> get, Action<int, int> apply,
         Action reset, bool requireMod, ref int y)
     {
-        var cur = get();
+        var (mods, key) = get();
         _content.Controls.Add(new Label { Text = label, Left = 22, Top = y + 7, AutoSize = true, ForeColor = ModernUI.Text });
 
         var box = new Label
@@ -276,7 +276,7 @@ internal sealed class SettingsForm : Form, IMessageFilter
             Top = y,
             Width = 150,
             Height = 30,
-            Text = DescribeHotkey(cur.mods, cur.key),
+            Text = DescribeHotkey(mods, key),
             ForeColor = ModernUI.Text,
             TextAlign = ContentAlignment.MiddleCenter,
             BackColor = Color.FromArgb(36, 255, 255, 255),
