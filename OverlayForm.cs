@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Numerics;
-using System.Windows.Forms;
 using PrinceWM.Capture;
 using PrinceWM.Core;
 using PrinceWM.Native;

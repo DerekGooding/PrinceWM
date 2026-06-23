@@ -5,9 +5,6 @@ using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
 using Windows.Graphics.DirectX.Direct3D11;
 using PrinceWM.Native;
-using Vortice.Direct2D1;
-using Vortice.Direct3D11;
-using Vortice.DXGI;
 using Vortice.DCommon;
 using AlphaMode = Vortice.DCommon.AlphaMode;
 

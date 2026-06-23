@@ -1,4 +1,3 @@
-using PrinceWM.Native;
 using static PrinceWM.Native.NativeMethods;
 
 namespace PrinceWM.Core;

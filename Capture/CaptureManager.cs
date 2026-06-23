@@ -1,9 +1,6 @@
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX.Direct3D11;
 using PrinceWM.Core;
-using Vortice.Direct2D1;
-using Vortice.Direct3D11;
-using Vortice.DXGI;
 
 namespace PrinceWM.Capture;
 

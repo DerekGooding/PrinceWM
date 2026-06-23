@@ -1,10 +1,7 @@
 using System.Numerics;
 using PrinceWM.Core;
-using Vortice.Direct2D1;
 using Vortice.Direct3D;
-using Vortice.Direct3D11;
 using Vortice.DirectWrite;
-using Vortice.DXGI;
 using Vortice.Mathematics;
 using Vortice.DCommon;
 using AlphaMode = Vortice.DXGI.AlphaMode;

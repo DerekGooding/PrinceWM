@@ -1,4 +1,3 @@
-using System.Windows.Forms;
 using PrinceWM.Core;
 
 namespace PrinceWM;

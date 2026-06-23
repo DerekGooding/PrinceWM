@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Drawing;
-using System.Windows.Forms;
 using PrinceWM.Core;
 using PrinceWM.Native;
 using PrinceWM.UI;
