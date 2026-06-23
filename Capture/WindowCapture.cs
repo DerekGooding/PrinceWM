@@ -1,11 +1,11 @@
+using PrinceWM.Native;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Vortice.DCommon;
 using Windows.Graphics;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
 using Windows.Graphics.DirectX.Direct3D11;
-using PrinceWM.Native;
-using Vortice.DCommon;
 using AlphaMode = Vortice.DCommon.AlphaMode;
 
 namespace PrinceWM.Capture;
@@ -60,6 +60,7 @@ internal sealed class WindowCapture : IDisposable
 
     // Diagnostics (for tracking down blank captures on Windows 10).
     public bool DiagHasPending => _hasPending;
+
     public bool DiagPendingBlack => _pendingBlack;
     public int DiagEmptyUpdates => _emptyUpdates;
     public int DiagFramesSeen => _framesSeen;
@@ -176,14 +177,12 @@ internal sealed class WindowCapture : IDisposable
         }
         if (latest == null)
         {
-
             if (!_hasGood) _emptyUpdates++;
             return;
         }
 
         using (latest)
         {
-
             SizeInt32 content = latest.ContentSize;
             IntPtr texPtr = CaptureInterop.GetTexturePointer(latest.Surface);
             using var src = new ID3D11Texture2D(texPtr);

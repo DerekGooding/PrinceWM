@@ -1,5 +1,5 @@
-using System.Drawing.Imaging;
 using PrinceWM.Native;
+using System.Drawing.Imaging;
 using DcAlphaMode = Vortice.DCommon.AlphaMode;
 
 namespace PrinceWM.Capture;

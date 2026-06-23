@@ -5,7 +5,6 @@ namespace PrinceWM.Native;
 
 internal static class NativeMethods
 {
-
     public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
     [DllImport("user32.dll")]
@@ -372,7 +371,8 @@ internal static class NativeMethods
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct POINT { public int X, Y; }
+    public struct POINT
+    { public int X, Y; }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct WINDOWPLACEMENT

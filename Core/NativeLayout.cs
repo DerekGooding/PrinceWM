@@ -22,7 +22,6 @@ internal static class NativeLayout
         {
             if (x > 0f && x + it.WorldSize.X > targetRowWidth)
             {
-
                 x = 0f;
                 y += rowHeight + Gap;
                 rowHeight = 0f;

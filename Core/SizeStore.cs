@@ -7,6 +7,7 @@ internal static class SizeStore
 {
     private static readonly string Dir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM");
+
     private static readonly string FilePath = Path.Combine(Dir, "sizes.json");
 
     public static Dictionary<string, Vector2> Load()

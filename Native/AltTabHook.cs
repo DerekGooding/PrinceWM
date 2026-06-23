@@ -5,7 +5,6 @@ namespace PrinceWM.Native;
 
 internal sealed class AltTabHook : IDisposable
 {
-
     private readonly LowLevelKeyboardProc _proc;
     private IntPtr _hookHandle;
 
@@ -23,6 +22,7 @@ internal sealed class AltTabHook : IDisposable
     public int MoveRightKey { get; set; } = 0x27;
 
     public bool Capturing { get; set; }
+
     public event Action<int, int>? HotkeyCaptured;
 
     public event Action<bool>? AltTabPressed;

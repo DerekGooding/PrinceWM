@@ -9,6 +9,7 @@ internal static class UpdateChecker
 
     private static readonly string Dir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM");
+
     private static readonly string OptOutPath = Path.Combine(Dir, "updates-disabled");
 
     public static string ReleasesUrl => $"https://github.com/{Repo}/releases/latest";

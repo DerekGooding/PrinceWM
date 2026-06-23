@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using PrinceWM.Native;
 using PrinceWM.UI;
+using System.Diagnostics;
 
 namespace PrinceWM;
 
@@ -12,7 +12,9 @@ internal sealed class SettingsForm : Form, IMessageFilter
     private Action<int, int>? _capApply;
     private bool _capRequireMod;
     private Label? _capBox;
+
     public event Action? Changed;
+
     public event Action? RearrangeRequested;
 
     private const int PanelW = 348;
@@ -224,7 +226,10 @@ internal sealed class SettingsForm : Form, IMessageFilter
         _content.Controls.Add(new Label
         {
             Text = "Click a bind, press the keys.  ⟲ resets it.",
-            Left = 22, Top = y, AutoSize = true, ForeColor = ModernUI.SubText,
+            Left = 22,
+            Top = y,
+            AutoSize = true,
+            ForeColor = ModernUI.SubText,
             Font = new Font("Segoe UI", 8f),
         });
         y += 24;
@@ -446,8 +451,10 @@ internal sealed class SettingsForm : Form, IMessageFilter
         y += 42;
     }
 
-    private void Emit() { Changed?.Invoke(); ThemeStore.Save(_theme); }
+    private void Emit()
+    { Changed?.Invoke(); ThemeStore.Save(_theme); }
 
     private static Color FromRgb(int rgb) => Color.FromArgb((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+
     private static int ToRgb(Color c) => (c.R << 16) | (c.G << 8) | c.B;
 }

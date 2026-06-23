@@ -1,3 +1,4 @@
 namespace PrinceWM.Core;
 
-internal enum DrawTool { Pen, Line, Rect, Ellipse, Fill, Eraser }
+internal enum DrawTool
+{ Pen, Line, Rect, Ellipse, Fill, Eraser }

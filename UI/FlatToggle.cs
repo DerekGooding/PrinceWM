@@ -5,6 +5,7 @@ namespace PrinceWM.UI;
 internal sealed class FlatToggle : Control
 {
     private bool _checked;
+
     public event EventHandler? CheckedChanged;
 
     public bool Checked
@@ -22,7 +23,8 @@ internal sealed class FlatToggle : Control
         BackColor = Color.Transparent;
     }
 
-    protected override void OnClick(EventArgs e) { Checked = !Checked; base.OnClick(e); }
+    protected override void OnClick(EventArgs e)
+    { Checked = !Checked; base.OnClick(e); }
 
     protected override void OnPaint(PaintEventArgs e)
     {

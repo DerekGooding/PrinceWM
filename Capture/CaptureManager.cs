@@ -14,6 +14,7 @@ internal sealed class CaptureManager : IDisposable
     private readonly IconCache _iconCache;
 
     public ID2D1Bitmap? GetIcon(WindowItem it) => _iconCache.Get(it);
+
     private WindowCapture? _wallpaper;
     private IntPtr _wallpaperHwnd;
     private ID2D1Bitmap? _staticWallpaper;
@@ -57,7 +58,6 @@ internal sealed class CaptureManager : IDisposable
             }
             catch (Exception ex)
             {
-
                 Log.Ex($"WindowCapture ctor '{it.Title}'", ex);
             }
         }
@@ -117,7 +117,6 @@ internal sealed class CaptureManager : IDisposable
         }
         catch (Exception ex)
         {
-
             int f = _failCounts.GetValueOrDefault(hwnd) + 1;
             _failCounts[hwnd] = f;
             if (f >= 3) { Log.Ex("Capture dropped (repeated failure)", ex); (drop ??= new()).Add(hwnd); }

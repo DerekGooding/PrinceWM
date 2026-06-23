@@ -1,3 +1,4 @@
 namespace PrinceWM.Core;
 
-internal enum PinKind { Image, Note }
+internal enum PinKind
+{ Image, Note }

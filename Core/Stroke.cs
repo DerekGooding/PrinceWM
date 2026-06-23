@@ -10,8 +10,11 @@ internal sealed class Stroke
     public int Fill { get; set; } = -1;
     public List<float> Pts { get; set; } = new();
 
-    public void Add(Vector2 p) { Pts.Add(p.X); Pts.Add(p.Y); }
+    public void Add(Vector2 p)
+    { Pts.Add(p.X); Pts.Add(p.Y); }
+
     public int Count => Pts.Count / 2;
+
     public Vector2 At(int i) => new(Pts[i * 2], Pts[i * 2 + 1]);
 
     public (float x, float y, float w, float h) Bounds()

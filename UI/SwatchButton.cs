@@ -5,7 +5,8 @@ namespace PrinceWM.UI;
 internal sealed class SwatchButton : Control
 {
     private Color _color = Color.White;
-    public Color Color { get => _color; set { _color = value; Invalidate(); } }
+    public Color Color
+    { get => _color; set { _color = value; Invalidate(); } }
 
     public SwatchButton()
     {

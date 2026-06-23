@@ -44,6 +44,7 @@ internal sealed class Camera
     }
 
     public Vector2 WorldToScreen(Vector2 world) => (world - Center) * Zoom + Viewport * 0.5f;
+
     public Vector2 ScreenToWorld(Vector2 screen) => (screen - Viewport * 0.5f) / Zoom + Center;
 
     private Vector2 ScreenToWorldTarget(Vector2 screen) =>
@@ -187,7 +188,8 @@ internal sealed class Camera
 
     private static float Smoother(float u) => u * u * u * (u * (u * 6f - 15f) + 10f);
 
-    private static float EaseOut(float u) { float p = 1f - u; return 1f - p * p * p * p * p; }
+    private static float EaseOut(float u)
+    { float p = 1f - u; return 1f - p * p * p * p * p; }
 
     private static float EaseOutP(float u, float power) => 1f - MathF.Pow(1f - u, power);
 

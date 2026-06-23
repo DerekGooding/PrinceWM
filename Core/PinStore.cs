@@ -6,6 +6,7 @@ internal static class PinStore
 {
     private static readonly string Dir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM");
+
     private static readonly string FilePath = Path.Combine(Dir, "pins.json");
 
     public static string ImagesDir => Path.Combine(Dir, "pins");

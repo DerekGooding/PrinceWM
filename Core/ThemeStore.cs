@@ -6,6 +6,7 @@ internal static class ThemeStore
 {
     private static readonly string Dir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM");
+
     private static readonly string FilePath = Path.Combine(Dir, "theme.json");
 
     public static Theme Load()

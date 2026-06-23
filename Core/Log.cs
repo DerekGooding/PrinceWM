@@ -4,6 +4,7 @@ internal static class Log
 {
     private static readonly string Path = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM", "PrinceWM.log");
+
     private static readonly object Gate = new();
 
     public static void Write(string msg)

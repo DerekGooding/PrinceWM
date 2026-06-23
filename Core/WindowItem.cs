@@ -4,8 +4,8 @@ namespace PrinceWM.Core;
 
 internal sealed class WindowItem
 {
-    public required IntPtr Hwnd { get; init; }
-    public required string Title { get; set; }
+    public IntPtr Hwnd { get; init; }
+    public string Title { get; set; }
 
     public string Key { get; set; } = "";
 

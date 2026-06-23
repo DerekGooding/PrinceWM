@@ -1,8 +1,8 @@
-using System.Diagnostics;
-using System.Numerics;
 using PrinceWM.Capture;
 using PrinceWM.Native;
 using PrinceWM.Render;
+using System.Diagnostics;
+using System.Numerics;
 
 namespace PrinceWM;
 
@@ -86,6 +86,7 @@ internal sealed class OverlayForm : Form
     private Vector2 _wsLabelDragLast;
     private bool _wsLabelDragged;
     private readonly List<GhostTile> _ghosts = new();
+
     private static readonly int[] WsPalette =
     {
         Theme.Rgb(135, 139, 146), Theme.Rgb(120, 170, 225), Theme.Rgb(150, 190, 130),
@@ -252,7 +253,6 @@ internal sealed class OverlayForm : Form
     {
         get
         {
-
             const int WS_EX_TOOLWINDOW = 0x00000080;
             var cp = base.CreateParams;
             cp.ExStyle |= WS_EX_TOOLWINDOW;
@@ -262,7 +262,6 @@ internal sealed class OverlayForm : Form
 
     protected override void OnPaintBackground(PaintEventArgs e)
     {
-
     }
 
     private Func<IntPtr, Vortice.Direct2D1.ID2D1Bitmap?>? _bitmapProvider;
@@ -387,7 +386,6 @@ internal sealed class OverlayForm : Form
 
     private void EnterDrill(string appKey)
     {
-
         var stack = _items.FirstOrDefault(it => it.AppKey == appKey);
         _drillReturnCenter = _camera.TargetCenter;
         _drillReturnZoom = _camera.TargetZoom;
@@ -403,7 +401,6 @@ internal sealed class OverlayForm : Form
         _selected = _items.Count > 0 ? 0 : -1;
         if (_items.Count > 0)
         {
-
             _camera.FitAll(_items, animate: false);
             Vector2 fitCenter = _camera.Center;
             float fitZoom = _camera.Zoom;
@@ -566,7 +563,6 @@ internal sealed class OverlayForm : Form
 
     private void FillAt(Vector2 wp)
     {
-
         for (int i = _strokes.Count - 1; i >= 0; i--)
             if (_strokes[i].EnclosesPoint(wp)) { _strokes[i].Fill = _draw.Color; DrawStore.Save(_strokes); return; }
     }
@@ -591,6 +587,7 @@ internal sealed class OverlayForm : Form
 
     private static System.Drawing.Color FromRgb(int rgb) =>
         Color.FromArgb((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+
     private static int ToRgb(System.Drawing.Color c) => (c.R << 16) | (c.G << 8) | c.B;
 
     private void GrowNoteIfNeeded(Pin note)
@@ -681,8 +678,12 @@ internal sealed class OverlayForm : Form
                 if (!live.Contains(m) && ws.Info.TryGetValue(m, out var gi) && gi.W > 1f && gi.H > 1f)
                     _ghosts.Add(new GhostTile
                     {
-                        AppKey = m, Title = gi.Title, Exe = gi.Exe, Tint = ws.Tint,
-                        Pos = new Vector2(gi.X, gi.Y), Size = new Vector2(gi.W, gi.H),
+                        AppKey = m,
+                        Title = gi.Title,
+                        Exe = gi.Exe,
+                        Tint = ws.Tint,
+                        Pos = new Vector2(gi.X, gi.Y),
+                        Size = new Vector2(gi.W, gi.H),
                     });
     }
 
@@ -912,7 +913,6 @@ internal sealed class OverlayForm : Form
 
     private void ShowCanvas()
     {
-
         var vs = SystemInformation.VirtualScreen;
         Bounds = new Rectangle(vs.X, vs.Y, vs.Width, vs.Height - 1);
 
@@ -1096,13 +1096,11 @@ internal sealed class OverlayForm : Form
         NativeMethods.RECT wr;
         if (NativeMethods.IsIconic(it.Hwnd))
         {
-
             var wp = new NativeMethods.WINDOWPLACEMENT
             { length = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.WINDOWPLACEMENT>() };
             if (!NativeMethods.GetWindowPlacement(it.Hwnd, ref wp)) return false;
             wr = wp.rcNormalPosition;
         }
-
         else if (!NativeMethods.GetExtendedFrameBounds(it.Hwnd, out wr) &&
                  !NativeMethods.GetWindowRect(it.Hwnd, out wr)) return false;
 
@@ -1242,7 +1240,6 @@ internal sealed class OverlayForm : Form
 
         if (animated != IntPtr.Zero)
         {
-
             IntPtr target = win11 ? NativeMethods.GetAncestor(animated, NativeMethods.GA_ROOT) : animated;
             SetDesktopIconsHidden(win11 && !AppTheme.ShowDesktopIcons);
             ResumeWallpaperEngine(animated);
@@ -1253,7 +1250,6 @@ internal sealed class OverlayForm : Form
 
         if (AppTheme.ShowDesktopIcons)
         {
-
             SetDesktopIconsHidden(false);
             IntPtr target = win11 ? NativeMethods.FindWindow("Progman", null) : IntPtr.Zero;
             if (target != IntPtr.Zero) _captures.SetWallpaper(target);
@@ -1261,7 +1257,6 @@ internal sealed class OverlayForm : Form
         }
         else
         {
-
             _captures.ClearWallpaper();
         }
     }
@@ -1332,7 +1327,6 @@ internal sealed class OverlayForm : Form
 
     private void OnAltTab(bool shift)
     {
-
         if (_open) { CycleSelection(shift); return; }
 
         try
@@ -1360,7 +1354,6 @@ internal sealed class OverlayForm : Form
         }
         catch (Exception ex)
         {
-
             Log.Write($"EX OpenCanvas: {ex}");
             CloseOverlay(false);
             _tray.BalloonTipTitle = "PrinceWM error";
@@ -1402,6 +1395,7 @@ internal sealed class OverlayForm : Form
             case NavKey.Enter:
                 BeginCommit(_selected);
                 break;
+
             case NavKey.Left:
             case NavKey.Up:
             case NavKey.Right:
@@ -1491,32 +1485,40 @@ internal sealed class OverlayForm : Form
             case Keys.W:
                 _camera.FitAll(_items, animate: true);
                 break;
+
             case Keys.M:
             case Keys.F:
                 if (_selected >= 0) _camera.FocusFill(_items[_selected], 0.28f);
                 break;
+
             case Keys.C:
                 if (_selected >= 0) _camera.CenterOn(_items[_selected].WorldCenter);
                 break;
+
             case Keys.D0:
             case Keys.NumPad0:
             case Keys.Z:
                 _camera.ResetZoom();
                 break;
+
             case Keys.Oemplus:
             case Keys.Add:
                 _camera.ZoomStep(1.18f);
                 break;
+
             case Keys.OemMinus:
             case Keys.Subtract:
                 _camera.ZoomStep(1f / 1.18f);
                 break;
+
             case Keys.R:
                 RearrangeAll();
                 break;
+
             case Keys.F12:
                 TakeScreenshot();
                 break;
+
             default:
                 handled = false;
                 break;
@@ -1578,7 +1580,6 @@ internal sealed class OverlayForm : Form
 
     private void OnIdle(object? sender, EventArgs e)
     {
-
         while (_open && !MessagePending())
             Frame();
     }
@@ -1690,12 +1691,10 @@ internal sealed class OverlayForm : Form
 
         try
         {
-
             if (_warmup > 0f) _warmup -= dt;
             _captureT += dt;
             if (_committing)
             {
-
             }
             else if (_camera.IsAnimating)
             {
@@ -1740,7 +1739,6 @@ internal sealed class OverlayForm : Form
         }
         catch (Exception ex)
         {
-
             Log.Ex("Frame", ex);
         }
 
@@ -1829,7 +1827,6 @@ internal sealed class OverlayForm : Form
             int hit = HitTest(e.Location);
             if (hit >= 0)
             {
-
                 if (e.Button == MouseButtons.Middle && Drilled)
                 {
                     PromoteToCanvas(_items[hit].Hwnd);
@@ -1912,7 +1909,6 @@ internal sealed class OverlayForm : Form
 
         if (_tileDrag >= 0)
         {
-
             if (Math.Abs(e.X - _tileDownMouse.X) + Math.Abs(e.Y - _tileDownMouse.Y) <= DragThreshold)
             {
                 _lastMouse = e.Location;
@@ -2008,7 +2004,6 @@ internal sealed class OverlayForm : Form
 
         if (_tileDrag >= 0)
         {
-
             if (_drillOnClick >= 0 && _drillOnClick < _items.Count && _items[_drillOnClick].StackCount > 1)
             {
                 string appKey = _items[_drillOnClick].AppKey;
@@ -2058,7 +2053,6 @@ internal sealed class OverlayForm : Form
         _dragged = false;
         if (wasDrag)
         {
-
             if (_dragVel.LengthSquared() > 400f) _camera.Flick(_dragVel);
             return;
         }

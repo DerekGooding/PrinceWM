@@ -6,10 +6,14 @@ internal sealed class FlatSlider : Control
 {
     private int _min, _max = 100, _value;
     private bool _drag;
+
     public event EventHandler? ValueChanged;
 
-    public int Minimum { get => _min; set { _min = value; Invalidate(); } }
-    public int Maximum { get => _max; set { _max = value; Invalidate(); } }
+    public int Minimum
+    { get => _min; set { _min = value; Invalidate(); } }
+    public int Maximum
+    { get => _max; set { _max = value; Invalidate(); } }
+
     public int Value
     {
         get => _value;
@@ -31,9 +35,14 @@ internal sealed class FlatSlider : Control
         Value = _min + (int)MathF.Round(t * (_max - _min));
     }
 
-    protected override void OnMouseDown(MouseEventArgs e) { _drag = true; SetFromX(e.X); base.OnMouseDown(e); }
-    protected override void OnMouseMove(MouseEventArgs e) { if (_drag) SetFromX(e.X); base.OnMouseMove(e); }
-    protected override void OnMouseUp(MouseEventArgs e) { _drag = false; base.OnMouseUp(e); }
+    protected override void OnMouseDown(MouseEventArgs e)
+    { _drag = true; SetFromX(e.X); base.OnMouseDown(e); }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    { if (_drag) SetFromX(e.X); base.OnMouseMove(e); }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    { _drag = false; base.OnMouseUp(e); }
 
     protected override void OnPaint(PaintEventArgs e)
     {

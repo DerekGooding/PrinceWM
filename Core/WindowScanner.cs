@@ -7,7 +7,6 @@ namespace PrinceWM.Core;
 
 internal static class WindowScanner
 {
-
     private static readonly HashSet<string> ClassBlocklist = new(StringComparer.Ordinal)
     {
         "Progman",
@@ -61,7 +60,6 @@ internal static class WindowScanner
             int x, y, w, h;
             if (minimized)
             {
-
                 var wp = new WINDOWPLACEMENT { length = Marshal.SizeOf<WINDOWPLACEMENT>() };
                 if (GetWindowPlacement(hWnd, ref wp))
                 {
@@ -179,7 +177,6 @@ internal static class WindowScanner
 
     private static IntPtr GetForegroundWindowSafe()
     {
-
         return ForegroundImport.GetForegroundWindow();
     }
 

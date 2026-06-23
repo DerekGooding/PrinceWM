@@ -6,6 +6,7 @@ internal static class DrawStore
 {
     private static readonly string Dir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM");
+
     private static readonly string FilePath = Path.Combine(Dir, "drawings.json");
 
     public static List<Stroke> Load()

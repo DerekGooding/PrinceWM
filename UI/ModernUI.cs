@@ -41,7 +41,6 @@ internal static class ModernUI
 
     public static void Acrylic(IntPtr hwnd, uint tintArgb)
     {
-
         uint a = (tintArgb >> 24) & 0xFF, r = (tintArgb >> 16) & 0xFF, g = (tintArgb >> 8) & 0xFF, b = tintArgb & 0xFF;
         uint abgr = (a << 24) | (b << 16) | (g << 8) | r;
 

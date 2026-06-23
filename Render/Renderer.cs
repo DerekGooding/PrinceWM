@@ -1,12 +1,12 @@
 using System.Numerics;
+using Vortice.DCommon;
 using Vortice.Direct3D;
 using Vortice.DirectWrite;
 using Vortice.Mathematics;
-using Vortice.DCommon;
 using AlphaMode = Vortice.DXGI.AlphaMode;
 using DcAlphaMode = Vortice.DCommon.AlphaMode;
-using FontStyle = Vortice.DirectWrite.FontStyle;
 using FeatureLevel = Vortice.Direct3D.FeatureLevel;
+using FontStyle = Vortice.DirectWrite.FontStyle;
 
 namespace PrinceWM.Render;
 
@@ -304,7 +304,6 @@ internal sealed class Renderer : IDisposable
             }
         if (selectedIndex >= 0 && selectedIndex < items.Count)
         {
-
             float ct = Math.Clamp(commitFade / 0.55f, 0f, 1f);
             float highlightFade = 1f - (ct * ct * (3f - 2f * ct));
             float cc = Math.Clamp(commitFade / 0.9f, 0f, 1f);
@@ -572,6 +571,7 @@ internal sealed class Renderer : IDisposable
     }
 
     private readonly System.Diagnostics.Stopwatch _caretClock = System.Diagnostics.Stopwatch.StartNew();
+
     private bool CaretOn() => (_caretClock.ElapsedMilliseconds / 530) % 2 == 0;
 
     public float MeasureNoteTextHeight(string text, float contentWidth)
@@ -711,7 +711,6 @@ internal sealed class Renderer : IDisposable
 
     private static Vector2 SpringTo(Vector2 s, float target, float dt)
     {
-
         float a = (target - s.X) * 320f - s.Y * 26f;
         s.Y += a * dt;
         s.X += s.Y * dt;
@@ -747,9 +746,11 @@ internal sealed class Renderer : IDisposable
                     _d2d.DrawLine(s.At(i - 1), s.At(i), _dyn, w, _roundStroke);
                 if (s.Count == 1) _d2d.FillEllipse(new Ellipse(s.At(0), w * 0.5f, w * 0.5f), _dyn);
                 break;
+
             case StrokeKind.Line:
                 _d2d.DrawLine(s.At(0), s.At(s.Count - 1), _dyn, w, _roundStroke);
                 break;
+
             case StrokeKind.Rect:
                 {
                     var (x, y, bw, bh) = s.Bounds();
@@ -885,9 +886,11 @@ internal sealed class Renderer : IDisposable
             case 2:
                 _d2d.DrawRoundedRectangle(new RoundedRectangle { Rect = new Rect(cx - u, cy - u * 0.76f, u * 2f, u * 1.52f), RadiusX = 4f, RadiusY = 4f }, _dyn, lw);
                 break;
+
             case 3:
                 _d2d.DrawEllipse(new Ellipse(new Vector2(cx, cy), u, u * 0.82f), _dyn, lw);
                 break;
+
             case 4:
                 {
                     var p1 = new Vector2(cx - u * 0.95f, cy - u * 0.35f);
@@ -1103,7 +1106,6 @@ internal sealed class Renderer : IDisposable
 
     private void DrawTileBitmap(ID2D1Bitmap bmp, Rect rect, RoundedRectangle rounded, float alpha)
     {
-
         var size = bmp.Size;
         float ta = rect.Width / MathF.Max(1f, rect.Height);
         float ba = size.Width / MathF.Max(1f, size.Height);
@@ -1186,7 +1188,6 @@ internal sealed class Renderer : IDisposable
 
         if (highlight && _theme.GlowIntensity > 0 && highlightFade > 0.001f)
         {
-
             float z = MathF.Max(zoom, 0.001f);
             float step = 6f / z;
             float maxA = opacity * (_theme.GlowIntensity / 100f) * 0.6f * highlightFade;

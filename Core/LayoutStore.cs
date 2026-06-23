@@ -7,6 +7,7 @@ internal static class LayoutStore
 {
     private static readonly string Dir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrinceWM");
+
     private static readonly string FilePath = Path.Combine(Dir, "layout.json");
 
     public static Dictionary<string, Vector2> Load()

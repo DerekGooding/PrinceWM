@@ -23,7 +23,6 @@ internal static class WindowTiling
 
     private static void Place(IntPtr hwnd, int x, int y, int w, int h)
     {
-
         if (IsIconic(hwnd) || IsZoomed(hwnd)) ShowWindow(hwnd, SW_RESTORE);
         SetWindowPos(hwnd, HWND_TOP, x, y, w, h, SWP_SHOWWINDOW | SWP_NOZORDER);
     }
